@@ -1,0 +1,25 @@
+{
+  "name": "upgradeps",
+  "version": "1.0.0",
+  "description": "Command-line utility to upgrade all packages in package.json to latest version, potentially upgrading across major versions.",
+  "main": "cli.js",
+  "bin": {
+    "upgradeps": "./cli.js"
+  },
+  "dependencies": {
+    "chalk": "^2.4.2"
+  },
+  "scripts": {
+    "upgradeps": "./cli.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lropero/upgradeps.git"
+  },
+  "author": "Luciano Ropero <lropero@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/lropero/upgradeps/issues"
+  },
+  "homepage": "https://github.com/lropero/upgradeps#readme"
+}
