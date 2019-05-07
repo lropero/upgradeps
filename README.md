@@ -8,5 +8,5 @@ yarn add --dev upgradeps
 
 ### Usage
 ```sh
-npx upgradeps
+yarn upgradeps
 ```

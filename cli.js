@@ -1,10 +1,17 @@
 #!/usr/bin/env node
 const chalk = require('chalk')
+const fs = require('fs')
+const path = require('path')
 const { execSync } = require('child_process')
 
-const { dependencies = {}, devDependencies = {}, peerDependencies = {} } = require('./package.json')
+const pckg = path.resolve(process.cwd(), 'package.json')
+if (!fs.existsSync(pckg)) {
+  process.exit(1)
+}
+const { dependencies = {}, devDependencies = {}, peerDependencies = {} } = require(pckg)
+const { version } = require('./package.json')
 
-console.log(chalk.yellow('Starting upgrade'))
+console.log(chalk.yellow(`Upgradeps v${version}`))
 const lists = { dependencies, devDependencies, peerDependencies }
 const options = { dependencies: '', devDependencies: ' --dev', peerDependencies: ' --peer' }
 Object.keys(lists).map((group) => {
