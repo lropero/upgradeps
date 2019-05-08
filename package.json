@@ -1,13 +1,14 @@
 {
   "name": "upgradeps",
-  "version": "1.0.1",
-  "description": "Command-line utility to upgrade all packages in package.json to latest version, potentially upgrading across major versions.",
+  "version": "1.0.2",
+  "description": "Command-line utility to update all packages in package.json to latest version, potentially upgrading across major versions.",
   "main": "cli.js",
   "bin": {
     "upgradeps": "./cli.js"
   },
   "dependencies": {
-    "chalk": "^2.4.2"
+    "chalk": "^2.4.2",
+    "command-exists": "^1.2.8"
   },
   "scripts": {
     "upgradeps": "./cli.js"
