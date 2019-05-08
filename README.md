@@ -15,7 +15,7 @@ npm install upgradeps --save-dev
 ```sh
 npx upgradeps
 ```
-To skip some packages, use `-s` or `--skip` followed by a comma-separated list of packages to ignore:
+To skip some packages use `-s` or `--skip` followed by a comma-separated list of packages to ignore:
 ```sh
 npx upgradeps -s react,react-dom
 ```
