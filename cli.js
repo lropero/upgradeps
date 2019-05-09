@@ -36,12 +36,8 @@ Object.keys(lists).map((group) => {
       const current = lists[group][item].replace(/[\^~]/, '').trim()
       const latest = execSync(getCommand(1, { item }), { stdio: [] }).toString().trim()
       if (current !== latest) {
-        if (skip.includes(item)) {
-          console.log(`${chalk.cyan(item)} ${chalk.yellow(figures.cross)} ${current} ${chalk.yellow(figures.arrowRight)} ${latest}`)
-        } else {
-          execSync(getCommand(2, { item, option: options[group] }), { stdio: [] })
-          console.log(`${chalk.cyan(item)} ${chalk.green(figures.tick)} ${current} ${chalk.yellow(figures.arrowRight)} ${latest}`)
-        }
+        !skip.includes(item) && execSync(getCommand(2, { item, option: options[group] }), { stdio: [] })
+        console.log(`${chalk.cyan(item)} ${skip.includes(item) ? chalk.yellow(figures.cross) : chalk.green(figures.tick)} ${current} ${chalk.yellow(figures.arrowRight)} ${latest}`)
       }
     } catch (error) {
       console.log(`${chalk.cyan(item)} ${chalk.red(figures.cross)} ${chalk.yellow(error.toString())}`)
