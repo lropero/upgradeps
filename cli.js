@@ -30,7 +30,7 @@ Object.keys(lists).map((group) => {
     const version = hasYarn ? `yarn info ${pckg} version` : `npm view ${pckg} version`
     try {
       const current = lists[group][pckg].replace(/[\^~]/, '').trim()
-      const [latest1, latest2] = execSync(version, { stdio: [] }).toString().trim().split('\n')
+      const [latest1, latest2] = execSync(version, { stdio: [] }).toString().split('\n')
       const latest = latest2 || latest1
       if (current !== latest) {
         !skip.includes(pckg) && execSync(install, { stdio: [] })
