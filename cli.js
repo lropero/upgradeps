@@ -17,7 +17,7 @@ commander
   .option('-s --skip <packages>', 'Skip packages')
   .parse(process.argv)
 const hasYarn = commandExistsSync('yarn')
-console.log(chalk[hasYarn ? 'green' : 'yellow'](`Upgradeps v${version}`))
+console.log(chalk[hasYarn ? 'green' : 'yellow'](`upgradeps v${version}`))
 const lists = { dependencies, devDependencies }
 const options = hasYarn
   ? { dependencies: '', devDependencies: ' --dev' }
@@ -33,8 +33,9 @@ Object.keys(lists).map((group) => {
       const [latest1, latest2] = execSync(version, { stdio: [] }).toString().split('\n')
       const latest = latest2 || latest1
       if (current !== latest) {
-        !skip.includes(pckg) && execSync(install, { stdio: [] })
-        console.log(`${chalk.cyan(pckg)} ${skip.includes(pckg) ? chalk.yellow(figures.cross) : chalk.green(figures.tick)} ${current} ${chalk.yellow(figures.arrowRight)} ${latest}`)
+        const skips = skip.includes(pckg)
+        !skips && execSync(install, { stdio: [] })
+        console.log(`${chalk.cyan(pckg)} ${skips ? chalk.yellow(figures.cross) : chalk.green(figures.tick)} ${current} ${chalk.yellow(figures.arrowRight)} ${latest}`)
       }
     } catch (error) {
       console.log(`${chalk.cyan(pckg)} ${chalk.red(figures.cross)} ${chalk.yellow(error.toString())}`)
