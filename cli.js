@@ -3,13 +3,13 @@ const chalk = require('chalk')
 const commandExistsSync = require('command-exists').sync
 const commander = require('commander')
 const figures = require('figures')
-const fs = require('fs')
-const path = require('path')
 const { execSync } = require('child_process')
+const { existsSync } = require('fs')
+const { resolve } = require('path')
 
-const pckg = path.resolve(process.cwd(), 'package.json')
-if (!fs.existsSync(pckg)) { process.exit(1) }
-const { dependencies = {}, devDependencies = {} } = require(pckg)
+const packageFile = resolve(process.cwd(), 'package.json')
+if (!existsSync(packageFile)) { process.exit(1) }
+const { dependencies = {}, devDependencies = {} } = require(packageFile)
 const { version } = require('./package.json')
 
 commander
@@ -18,12 +18,6 @@ commander
   .parse(process.argv)
 const hasYarn = commandExistsSync('yarn')
 console.log(chalk[hasYarn ? 'green' : 'yellow'](`Upgradeps v${version}`))
-const getCommand = (which, args) => {
-  switch (which) {
-    case 1: return hasYarn ? `yarn info ${args.item} version` : `npm view ${args.item} version`
-    case 2: return hasYarn ? `yarn remove ${args.item} && yarn add ${args.item}${args.option}` : `npm uninstall ${args.item} && npm install ${args.item}${args.option}`
-  }
-}
 const lists = { dependencies, devDependencies }
 const options = hasYarn
   ? { dependencies: '', devDependencies: ' --dev' }
@@ -31,16 +25,18 @@ const options = hasYarn
 const skip = (commander.skip || '').split(',')
 Object.keys(lists).map((group) => {
   console.log(chalk.yellow(`…${group}`))
-  Object.keys(lists[group]).map((item) => {
+  Object.keys(lists[group]).map((pckg) => {
+    const install = hasYarn ? `yarn remove ${pckg} && yarn add ${pckg}${options[group]}` : `npm uninstall ${pckg} && npm install ${pckg}${options[group]}`
+    const version = hasYarn ? `yarn info ${pckg} version` : `npm view ${pckg} version`
     try {
-      const current = lists[group][item].replace(/[\^~]/, '').trim()
-      const latest = execSync(getCommand(1, { item }), { stdio: [] }).toString().trim()
+      const current = lists[group][pckg].replace(/[\^~]/, '').trim()
+      const latest = execSync(version, { stdio: [] }).toString().trim()
       if (current !== latest) {
-        !skip.includes(item) && execSync(getCommand(2, { item, option: options[group] }), { stdio: [] })
-        console.log(`${chalk.cyan(item)} ${skip.includes(item) ? chalk.yellow(figures.cross) : chalk.green(figures.tick)} ${current} ${chalk.yellow(figures.arrowRight)} ${latest}`)
+        !skip.includes(pckg) && execSync(install, { stdio: [] })
+        console.log(`${chalk.cyan(pckg)} ${skip.includes(pckg) ? chalk.yellow(figures.cross) : chalk.green(figures.tick)} ${current} ${chalk.yellow(figures.arrowRight)} ${latest}`)
       }
     } catch (error) {
-      console.log(`${chalk.cyan(item)} ${chalk.red(figures.cross)} ${chalk.yellow(error.toString())}`)
+      console.log(`${chalk.cyan(pckg)} ${chalk.red(figures.cross)} ${chalk.yellow(error.toString())}`)
     }
   })
 })
