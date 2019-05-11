@@ -6,7 +6,7 @@ Installation not required, simply run in project's root anytime you'd like to up
 ```sh
 npx upgradeps
 ```
-Not using npx? Then `yarn add upgradeps --dev` (or `npm install upgradeps --save-dev`) to install locally, then `yarn run upgradeps` (or `npm run upgradeps`).
+>Not using npx? Then `yarn add upgradeps --dev` (or `npm install upgradeps --save-dev`) to install locally, then `yarn run upgradeps` (or `npm run upgradeps`).
 
 ### Skipping packages
 To skip some packages use `-s` or `--skip` followed by a comma-separated list of packages to ignore:
