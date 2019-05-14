@@ -1,4 +1,4 @@
-# upgradeps
+# upgradeps &middot; [![npm version](https://badge.fury.io/js/upgradeps.svg)](https://www.npmjs.com/package/upgradeps)
 Command-line utility to **upgra**de all **dep**endencie**s** in package.json to latest version, potentially updating packages across major versions. Uses yarn when available, npm otherwise. Inspired by [yarn-upgrade-all](https://github.com/tylerlong/yarn-upgrade-all#readme).
 
 ### Installation and usage
