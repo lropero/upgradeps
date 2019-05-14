@@ -8,8 +8,12 @@ npx upgradeps
 ```
 >Not using npx? Then `yarn add upgradeps --dev` (or `npm install upgradeps --save-dev`) to install locally, then `yarn run upgradeps` (or `npm run upgradeps`).
 
-### Skipping packages
-To skip some packages use `-s` or `--skip` followed by a comma-separated list of packages to ignore:
+### Options
+To force npm instead of yarn use `-n` or `--npm` option.
+```sh
+npx upgradeps -n
+```
+To skip packages use `-s` or `--skip` followed by a comma-separated list of packages to ignore:
 ```sh
 npx upgradeps -s react,react-dom
 ```

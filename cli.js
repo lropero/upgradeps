@@ -14,20 +14,21 @@ const { version } = require('./package.json')
 
 commander
   .version(version, '-v, --version')
-  .option('-s --skip <packages>', 'Skip packages')
+  .option('-n, --npm', 'Force npm')
+  .option('-s, --skip <packages>', 'Skip packages')
   .parse(process.argv)
-const hasYarn = commandExistsSync('yarn')
-console.log(chalk[hasYarn ? 'green' : 'yellow'](`upgradeps v${version}`))
+const useYarn = commandExistsSync('yarn') && !commander.npm
+console.log(chalk[useYarn ? 'green' : 'blue'](`upgradeps v${version}`))
 const lists = { dependencies, devDependencies }
-const options = hasYarn
+const options = useYarn
   ? { dependencies: '', devDependencies: ' --dev' }
   : { dependencies: ' --save', devDependencies: ' --save-dev' }
 const skip = (commander.skip || '').split(',')
 Object.keys(lists).map((group) => {
   console.log(chalk.yellow(`…${group}`))
   Object.keys(lists[group]).map((pckg) => {
-    const install = hasYarn ? `yarn remove ${pckg} && yarn add ${pckg}${options[group]}` : `npm uninstall ${pckg} && npm install ${pckg}${options[group]}`
-    const version = hasYarn ? `yarn info ${pckg} version` : `npm view ${pckg} version`
+    const install = useYarn ? `yarn remove ${pckg} && yarn add ${pckg}${options[group]}` : `npm uninstall ${pckg} && npm install ${pckg}${options[group]}`
+    const version = useYarn ? `yarn info ${pckg} version` : `npm view ${pckg} version`
     try {
       const current = lists[group][pckg].replace(/[\^~]/, '').trim()
       const [latest1, latest2] = execSync(version, { stdio: [] }).toString().split('\n')
