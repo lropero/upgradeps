@@ -2,9 +2,11 @@
 const chalk = require('chalk')
 const commandExistsSync = require('command-exists').sync
 const commander = require('commander')
-const figures = require('figures')
-const { execSync } = require('child_process')
+const { arrowRight, cross, tick } = require('figures')
+const { concatMap } = require('rxjs/operators')
+const { exec, execSync } = require('child_process')
 const { existsSync } = require('fs')
+const { forkJoin, from } = require('rxjs')
 const { resolve } = require('path')
 
 const packageFile = resolve(process.cwd(), 'package.json')
@@ -14,32 +16,54 @@ const { version } = require('./package.json')
 
 commander
   .version(version, '-v, --version')
-  .option('-n, --npm', 'Force npm')
+  .option('-n, --npm', 'Force npm instead of yarn')
   .option('-s, --skip <packages>', 'Skip packages')
   .parse(process.argv)
-const useYarn = commandExistsSync('yarn') && !commander.npm
-console.log(chalk[useYarn ? 'green' : 'blue'](`upgradeps v${version}`))
-const lists = { dependencies, devDependencies }
-const options = useYarn
-  ? { dependencies: '', devDependencies: ' --dev' }
-  : { dependencies: ' --save', devDependencies: ' --save-dev' }
+const npm = !!commander.npm
 const skip = (commander.skip || '').split(',')
-Object.keys(lists).map((group) => {
-  console.log(chalk.yellow(`…${group}`))
-  Object.keys(lists[group]).map((pckg) => {
-    const install = useYarn ? `yarn remove ${pckg} && yarn add ${pckg}${options[group]}` : `npm uninstall ${pckg} && npm install ${pckg}${options[group]}`
-    const version = useYarn ? `yarn info ${pckg} version` : `npm view ${pckg} version`
-    try {
-      const current = lists[group][pckg].replace(/[\^~]/, '').trim()
-      const [latest1, latest2] = execSync(version, { stdio: [] }).toString().split('\n')
-      const latest = latest2 || latest1
-      if (current !== latest) {
-        const skips = skip.includes(pckg)
-        !skips && execSync(install, { stdio: [] })
-        console.log(`${chalk.cyan(pckg)} ${skips ? chalk.yellow(figures.cross) : chalk.green(figures.tick)} ${current} ${chalk.yellow(figures.arrowRight)} ${latest}`)
+
+const useYarn = commandExistsSync('yarn') && !npm
+console.log(chalk[useYarn ? 'green' : 'blue'](`upgradeps v${version}`))
+const deps = { dependencies, devDependencies }
+const groups = Object.keys(deps)
+const options = useYarn ? { dependencies: '', devDependencies: ' --dev' } : { dependencies: ' --save', devDependencies: ' --save-dev' }
+from(groups).pipe(
+  concatMap((group) => new Promise(async (resolve, reject) => {
+    console.log(chalk.yellow(`…${group}`))
+    const pckgs = Object.keys(deps[group])
+    const sources = pckgs.reduce((sources, pckg) => ({
+      ...sources,
+      [pckg]: new Promise((resolve, reject) => {
+        try {
+          exec(`npm view ${pckg} version`, { stdio: [] }, (error, stdout) => {
+            if (error) { return resolve(false) }
+            return resolve(stdout.trim())
+          })
+        } catch (error) {
+          return resolve(false)
+        }
+      })
+    }), {})
+    const versions = await forkJoin(sources).toPromise()
+    const latests = Object.keys(versions).reduce((latests, pckg) => {
+      if (versions[pckg]) {
+        latests[pckg] = versions[pckg]
       }
-    } catch (error) {
-      console.log(`${chalk.cyan(pckg)} ${chalk.red(figures.cross)} ${chalk.yellow(error.toString())}`)
-    }
-  })
-})
+      return latests
+    }, {})
+    Object.keys(latests).map((pckg) => {
+      const current = deps[group][pckg].replace(/[\^~]/, '').trim()
+      const latest = latests[pckg]
+      if (current !== latest) {
+        try {
+          const skips = skip.includes(pckg)
+          !skips && execSync(useYarn ? `yarn remove ${pckg} && yarn add ${pckg}${options[group]} --ignore-scripts` : `npm uninstall ${pckg} && npm install ${pckg}${options[group]} --ignore-scripts`, { stdio: [] })
+          console.log(`${chalk.cyan(pckg)} ${skips ? chalk.yellow(cross) : chalk.green(tick)} ${current} ${chalk.yellow(arrowRight)} ${latest}`)
+        } catch (error) {
+          console.log(`${chalk.cyan(pckg)} ${chalk.red(cross)} ${chalk.yellow(error.toString())}`)
+        }
+      }
+    })
+    return resolve()
+  }))
+).subscribe()
