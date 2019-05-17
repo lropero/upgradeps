@@ -3,8 +3,8 @@ const chalk = require('chalk')
 const commander = require('commander')
 const { arrowRight, cross, tick } = require('figures')
 const { exec, execSync } = require('child_process')
+const { existsSync, readFileSync, writeFileSync } = require('fs')
 const { forkJoin } = require('rxjs')
-const { readFileSync, writeFileSync } = require('fs')
 const { resolve } = require('path')
 const { sync: commandExistsSync } = require('command-exists')
 
@@ -40,6 +40,7 @@ const upgrade = async (options) => {
         })
       })
     }), {})
+    console.log(chalk.gray('querying versions'))
     const latests = await forkJoin(sources).toPromise()
     let hasUpdates = false
     Object.keys(deps).map((group) => {
@@ -66,9 +67,11 @@ const upgrade = async (options) => {
         packageJSON.devDependencies = deps.devDependencies
       }
       writeFileSync(packagePath, JSON.stringify(packageJSON, null, 2) + '\n', 'utf8')
-      const useYarn = commandExistsSync('yarn') && !options.npm
-      console.log(chalk.gray(`running ${useYarn ? 'yarn' : 'npm install'}`))
-      execSync(useYarn ? 'yarn' : 'npm install', { stdio: [] })
+      if (existsSync(resolve(process.cwd(), 'node_modules'))) {
+        const useYarn = commandExistsSync('yarn') && !options.npm
+        console.log(chalk.gray(`running ${useYarn ? 'yarn' : 'npm install'}`))
+        execSync(useYarn ? 'yarn' : 'npm install', { stdio: [] })
+      }
       console.log(chalk.blue('package.json upgraded'))
     } else {
       console.log(chalk.blue('no updates'))
