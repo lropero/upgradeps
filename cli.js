@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 const chalk = require('chalk')
 const commander = require('commander')
-const libnpm = require('libnpm')
-const path = require('path')
 const { arrowRight, cross, tick } = require('figures')
 const { execSync } = require('child_process')
 const { existsSync, readFileSync, writeFileSync } = require('fs')
+const { manifest } = require('libnpm')
+const { resolve: pathResolve } = require('path')
 const { sync: commandExistsSync } = require('command-exists')
 
 const { version } = require('./package.json')
@@ -20,7 +20,7 @@ const errorToString = (error) => {
 }
 
 const getInfo = () => {
-  const packagePath = path.resolve(process.cwd(), 'package.json')
+  const packagePath = pathResolve(process.cwd(), 'package.json')
   const packageJSON = JSON.parse(readFileSync(packagePath, 'utf8'))
   const { dependencies = {}, devDependencies = {} } = packageJSON
   return { deps: { dependencies, devDependencies }, packageJSON, packagePath, pckgs: Object.keys(dependencies).concat(Object.keys(devDependencies)) }
@@ -31,7 +31,7 @@ const queryVersions = (pckgs) => new Promise(async (resolve, reject) => {
     console.log(chalk.gray('querying versions'))
     const responses = await Promise.all(pckgs.map((pckg) => new Promise(async (resolve, reject) => {
       try {
-        const { version = false } = await libnpm.manifest(pckg)
+        const { version = false } = await manifest(pckg)
         return resolve({ [pckg]: version })
       } catch (error) {
         if (error.statusCode === 404) {
@@ -40,7 +40,7 @@ const queryVersions = (pckgs) => new Promise(async (resolve, reject) => {
         return reject(error)
       }
     })))
-    return resolve(responses.reduce((versions, response) => ({ ...versions, ...response }), {}))
+    return resolve(responses.reduce((versions, response) => Object.values(response)[0] ? { ...versions, ...response } : versions, {}))
   } catch (error) {
     return reject(error)
   }
@@ -63,17 +63,15 @@ const upgrade = ({ deps, options, packageJSON, packagePath, versions }) => new P
     let hasUpdates = false
     for (const group of Object.keys(deps)) {
       for (const pckg of Object.keys(deps[group])) {
-        if (versions[pckg]) {
-          const current = deps[group][pckg].replace(/[\^~]/, '').trim()
-          const latest = versions[pckg]
-          if (current !== latest) {
-            const skips = options.skip.includes(pckg)
-            if (!skips) {
-              deps[group][pckg] = `^${latest}`
-              hasUpdates = true
-            }
-            console.log(`${chalk.cyan(pckg)} ${skips ? chalk.yellow(cross) : chalk.green(tick)} ${current} ${chalk.yellow(arrowRight)} ${latest}`)
+        const current = deps[group][pckg].replace(/[\^~]/, '').trim()
+        const latest = versions[pckg]
+        if (current !== latest) {
+          const skips = options.skip.includes(pckg)
+          if (!skips) {
+            deps[group][pckg] = `^${latest}`
+            hasUpdates = true
           }
+          console.log(`${chalk.cyan(pckg)} ${skips ? chalk.yellow(cross) : chalk.green(tick)} ${current} ${chalk.yellow(arrowRight)} ${latest}`)
         }
       }
     }
@@ -98,7 +96,7 @@ const writePackage = ({ deps, packageJSON, packagePath, useYarn }) => new Promis
       packageJSON.devDependencies = deps.devDependencies
     }
     writeFileSync(packagePath, JSON.stringify(packageJSON, null, 2) + '\n', 'utf8')
-    if (existsSync(path.resolve(process.cwd(), 'node_modules'))) {
+    if (existsSync(pathResolve(process.cwd(), 'node_modules'))) {
       console.log(chalk.gray(`running ${useYarn ? 'yarn' : 'npm install'}`))
       execSync(useYarn ? 'yarn' : 'npm install', { stdio: [] })
     }
