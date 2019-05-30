@@ -4,7 +4,7 @@ const commander = require('commander')
 const { arrowRight, cross, tick } = require('figures')
 const { execSync } = require('child_process')
 const { existsSync, readFileSync, writeFileSync } = require('fs')
-const { manifest } = require('libnpm')
+const { manifest } = require('pacote')
 const { resolve: pathResolve } = require('path')
 const { sync: commandExistsSync } = require('command-exists')
 
