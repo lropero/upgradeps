@@ -10,6 +10,7 @@
     "chalk": "^2.4.2",
     "command-exists": "^1.2.8",
     "commander": "^2.20.0",
+    "detect-indent": "^6.0.0",
     "figures": "^3.0.0",
     "pacote": "^9.5.2"
   },
