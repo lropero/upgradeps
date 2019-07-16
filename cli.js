@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 const chalk = require('chalk')
 const commander = require('commander')
+const detectIndent = require('detect-indent')
 const { arrowRight, cross, tick } = require('figures')
 const { execSync } = require('child_process')
 const { existsSync, readFileSync, writeFileSync } = require('fs')
 const { manifest } = require('pacote')
 const { resolve: pathResolve } = require('path')
 const { sync: commandExistsSync } = require('command-exists')
-const detectIndent = require('detect-indent')
 
 const { version } = require('./package.json')
 
@@ -15,7 +15,6 @@ const errorToString = (error) => {
   if (!(error instanceof Error)) {
     error = new Error(error.toString())
   }
-
   error.name = ''
   const string = error.toString()
   return string.charAt(0).toUpperCase() + string.slice(1)
@@ -23,17 +22,15 @@ const errorToString = (error) => {
 
 const getInfo = () => {
   const packagePath = pathResolve(process.cwd(), 'package.json')
-  const packageContent = readFileSync(packagePath, 'utf8')
-
-  // Check which indent (tab / spaces) is currently used
-  const packageIndent = detectIndent(packageContent)
-  const packageJSON = JSON.parse(packageContent)
+  const packageContents = readFileSync(packagePath, 'utf8')
+  const packageIndent = detectIndent(packageContents)
+  const packageJSON = JSON.parse(packageContents)
   const { dependencies = {}, devDependencies = {} } = packageJSON
   return {
     deps: { dependencies, devDependencies },
+    packageIndent,
     packageJSON,
     packagePath,
-    packageIndent,
     pckgs: Object.keys(dependencies).concat(Object.keys(devDependencies))
   }
 }
@@ -57,9 +54,9 @@ const queryVersions = async (pckgs) => {
 const run = async (options) => {
   try {
     console.log(chalk.green(`upgradeps v${version}`))
-    const { deps, packageJSON, packagePath, packageIndent, pckgs } = getInfo()
+    const { deps, packageIndent, packageJSON, packagePath, pckgs } = getInfo()
     const versions = await queryVersions(pckgs)
-    await upgrade({ deps, options, packageJSON, packagePath, packageIndent, versions })
+    await upgrade({ deps, options, packageIndent, packageJSON, packagePath, versions })
   } catch (error) {
     console.log(`${chalk.red(cross)} ${errorToString(error)}`)
     if (error.stack) {
@@ -69,7 +66,7 @@ const run = async (options) => {
   }
 }
 
-const upgrade = async ({ deps, options, packageJSON, packagePath, packageIndent, versions }) => {
+const upgrade = async ({ deps, options, packageIndent, packageJSON, packagePath, versions }) => {
   let hasUpdates = false
   for (const group of Object.keys(deps)) {
     for (const pckg of Object.keys(deps[group])) {
@@ -86,23 +83,20 @@ const upgrade = async ({ deps, options, packageJSON, packagePath, packageIndent,
     }
   }
   if (hasUpdates) {
-    await writePackage({ deps, packageJSON, packagePath, packageIndent, useYarn: commandExistsSync('yarn') && !options.npm })
+    await writePackage({ deps, packageIndent, packageJSON, packagePath, useYarn: commandExistsSync('yarn') && !options.npm })
     console.log(chalk.blue('package.json upgraded'))
   } else {
     console.log(chalk.blue('no updates'))
   }
 }
 
-const writePackage = ({ deps, packageJSON, packagePath, packageIndent, useYarn }) => {
+const writePackage = ({ deps, packageIndent, packageJSON, packagePath, useYarn }) => {
   if (packageJSON.dependencies) {
     packageJSON.dependencies = deps.dependencies
   }
-
   if (packageJSON.devDependencies) {
     packageJSON.devDependencies = deps.devDependencies
   }
-
-  // Use previous indent
   const indent = packageIndent.type === 'tab' ? '\t' : packageIndent.amount
   writeFileSync(packagePath, JSON.stringify(packageJSON, null, indent) + '\n', 'utf8')
   if (existsSync(pathResolve(process.cwd(), 'node_modules'))) {
