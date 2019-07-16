@@ -26,25 +26,21 @@ const getInfo = () => {
   return { deps: { dependencies, devDependencies }, packageJSON, packagePath, pckgs: Object.keys(dependencies).concat(Object.keys(devDependencies)) }
 }
 
-const queryVersions = (pckgs) => new Promise(async (resolve, reject) => {
-  try {
-    console.log(chalk.gray('querying versions'))
-    const responses = await Promise.all(pckgs.map((pckg) => new Promise(async (resolve, reject) => {
-      try {
-        const { version = false } = await manifest(pckg)
-        return resolve({ [pckg]: version })
-      } catch (error) {
-        if (error.statusCode === 404) {
-          return resolve({ [pckg]: false })
-        }
-        return reject(error)
+const queryVersions = async (pckgs) => {
+  console.log(chalk.gray('querying versions'))
+  const responses = await Promise.all(pckgs.map(async (pckg) => {
+    try {
+      const { version = false } = await manifest(pckg)
+      return { [pckg]: version }
+    } catch (error) {
+      if (error.statusCode === 404) {
+        return { [pckg]: false }
       }
-    })))
-    return resolve(responses.reduce((versions, response) => Object.values(response)[0] ? { ...versions, ...response } : versions, {}))
-  } catch (error) {
-    return reject(error)
-  }
-})
+      throw error
+    }
+  }))
+  return responses.reduce((versions, response) => Object.values(response)[0] ? { ...versions, ...response } : versions, {})
+}
 
 const run = async (options) => {
   try {
@@ -54,57 +50,50 @@ const run = async (options) => {
     await upgrade({ deps, options, packageJSON, packagePath, versions })
   } catch (error) {
     console.log(`${chalk.red(cross)} ${errorToString(error)}`)
-    process.exit(0)
+    if (error.stack) {
+      console.log(chalk.yellow(error.stack))
+    }
+    process.exit(1)
   }
 }
 
-const upgrade = ({ deps, options, packageJSON, packagePath, versions }) => new Promise(async (resolve, reject) => {
-  try {
-    let hasUpdates = false
-    for (const group of Object.keys(deps)) {
-      for (const pckg of Object.keys(deps[group])) {
-        const current = deps[group][pckg].replace(/[\^~]/, '').trim()
-        const latest = versions[pckg]
-        if (current !== latest) {
-          const skips = options.skip.includes(pckg)
-          if (!skips) {
-            deps[group][pckg] = `^${latest}`
-            hasUpdates = true
-          }
-          console.log(`${chalk.cyan(pckg)} ${skips ? chalk.yellow(cross) : chalk.green(tick)} ${current} ${chalk.yellow(arrowRight)} ${latest}`)
+const upgrade = async ({ deps, options, packageJSON, packagePath, versions }) => {
+  let hasUpdates = false
+  for (const group of Object.keys(deps)) {
+    for (const pckg of Object.keys(deps[group])) {
+      const current = deps[group][pckg].replace(/[\^~]/, '').trim()
+      const latest = versions[pckg]
+      if (current !== latest) {
+        const skips = options.skip.includes(pckg)
+        if (!skips) {
+          deps[group][pckg] = `^${latest}`
+          hasUpdates = true
         }
+        console.log(`${chalk.cyan(pckg)} ${skips ? chalk.yellow(cross) : chalk.green(tick)} ${current} ${chalk.yellow(arrowRight)} ${latest}`)
       }
     }
-    if (hasUpdates) {
-      await writePackage({ deps, packageJSON, packagePath, useYarn: commandExistsSync('yarn') && !options.npm })
-      console.log(chalk.blue('package.json upgraded'))
-    } else {
-      console.log(chalk.blue('no updates'))
-    }
-    return resolve()
-  } catch (error) {
-    return reject(error)
   }
-})
+  if (hasUpdates) {
+    await writePackage({ deps, packageJSON, packagePath, useYarn: commandExistsSync('yarn') && !options.npm })
+    console.log(chalk.blue('package.json upgraded'))
+  } else {
+    console.log(chalk.blue('no updates'))
+  }
+}
 
-const writePackage = ({ deps, packageJSON, packagePath, useYarn }) => new Promise((resolve, reject) => {
-  try {
-    if (packageJSON.dependencies) {
-      packageJSON.dependencies = deps.dependencies
-    }
-    if (packageJSON.devDependencies) {
-      packageJSON.devDependencies = deps.devDependencies
-    }
-    writeFileSync(packagePath, JSON.stringify(packageJSON, null, 2) + '\n', 'utf8')
-    if (existsSync(pathResolve(process.cwd(), 'node_modules'))) {
-      console.log(chalk.gray(`running ${useYarn ? 'yarn' : 'npm install'}`))
-      execSync(useYarn ? 'yarn' : 'npm install', { stdio: [] })
-    }
-    return resolve()
-  } catch (error) {
-    return reject(error)
+const writePackage = ({ deps, packageJSON, packagePath, useYarn }) => {
+  if (packageJSON.dependencies) {
+    packageJSON.dependencies = deps.dependencies
   }
-})
+  if (packageJSON.devDependencies) {
+    packageJSON.devDependencies = deps.devDependencies
+  }
+  writeFileSync(packagePath, JSON.stringify(packageJSON, null, 2) + '\n', 'utf8')
+  if (existsSync(pathResolve(process.cwd(), 'node_modules'))) {
+    console.log(chalk.gray(`running ${useYarn ? 'yarn' : 'npm install'}`))
+    execSync(useYarn ? 'yarn' : 'npm install', { stdio: [] })
+  }
+}
 
 commander
   .version(version, '-v, --version')
