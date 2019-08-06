@@ -67,18 +67,21 @@ const run = async (options) => {
 }
 
 const upgrade = async ({ deps, options, packageIndent, packageJSON, packagePath, versions }) => {
+  const found = Object.keys(versions)
   let hasUpdates = false
   for (const group of Object.keys(deps)) {
     for (const pckg of Object.keys(deps[group])) {
-      const current = deps[group][pckg].replace(/[\^~]/, '').trim()
-      const latest = versions[pckg]
-      if (current !== latest) {
-        const skips = options.skip.includes(pckg)
-        if (!skips) {
-          deps[group][pckg] = `^${latest}`
-          hasUpdates = true
+      if (found.includes(pckg)) {
+        const current = deps[group][pckg].replace(/[\^~]/, '').trim()
+        const latest = versions[pckg]
+        if (current !== latest) {
+          const skips = options.skip.includes(pckg)
+          if (!skips) {
+            deps[group][pckg] = `^${latest}`
+            hasUpdates = true
+          }
+          console.log(`${chalk.cyan(pckg)} ${skips ? chalk.yellow(cross) : chalk.green(tick)} ${current} ${chalk.yellow(arrowRight)} ${latest}`)
         }
-        console.log(`${chalk.cyan(pckg)} ${skips ? chalk.yellow(cross) : chalk.green(tick)} ${current} ${chalk.yellow(arrowRight)} ${latest}`)
       }
     }
   }
