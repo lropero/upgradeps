@@ -1,6 +1,6 @@
 {
   "name": "upgradeps",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Blazingly fast command-line utility to upgrade all dependencies in package.json to latest version, potentially updating packages across major versions.",
   "main": "cli.js",
   "bin": {

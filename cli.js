@@ -80,14 +80,18 @@ const upgrade = async ({ deps, options, packageIndent, packageJSON, packagePath,
             deps[group][pckg] = `^${latest}`
             hasUpdates = true
           }
-          console.log(`${chalk.cyan(pckg)} ${skips ? chalk.yellow(cross) : chalk.green(tick)} ${current} ${chalk.yellow(arrowRight)} ${latest}`)
+          console.log(`${chalk.cyan(pckg)} ${skips || options.test ? chalk.yellow(cross) : chalk.green(tick)} ${current} ${chalk.yellow(arrowRight)} ${latest}`)
         }
       }
     }
   }
   if (hasUpdates) {
-    await writePackage({ deps, packageIndent, packageJSON, packagePath, useYarn: commandExistsSync('yarn') && !options.npm })
-    console.log(chalk.blue('package.json upgraded'))
+    if (options.test) {
+      console.log(chalk.blue('package.json not upgraded, run without -t option to upgrade'))
+    } else {
+      await writePackage({ deps, packageIndent, packageJSON, packagePath, useYarn: commandExistsSync('yarn') && !options.npm })
+      console.log(chalk.blue('package.json upgraded'))
+    }
   } else {
     console.log(chalk.blue('no updates'))
   }
@@ -112,5 +116,6 @@ commander
   .version(version, '-v, --version')
   .option('-n, --npm', 'Force npm instead of yarn')
   .option('-s, --skip <packages>', 'Skip packages')
+  .option('-t, --test', 'Query versions without upgrading')
   .parse(process.argv)
-run({ npm: !!commander.npm, skip: (commander.skip || '').split(',') })
+run({ npm: !!commander.npm, skip: (commander.skip || '').split(','), test: !!commander.test })
