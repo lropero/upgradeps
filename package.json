@@ -1,10 +1,10 @@
 {
   "name": "upgradeps",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "description": "Blazingly fast command-line utility to upgrade all dependencies in package.json to latest version, potentially updating packages across major versions.",
   "main": "cmd.js",
   "bin": {
-    "upgradeps": "./bin/cmd.js"
+    "upgradeps": "./cmd.js"
   },
   "dependencies": {
     "chalk": "^2.4.2",
