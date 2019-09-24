@@ -1,21 +1,18 @@
 {
   "name": "upgradeps",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "Blazingly fast command-line utility to upgrade all dependencies in package.json to latest version, potentially updating packages across major versions.",
-  "main": "cmd.js",
+  "main": "upgradeps.js",
   "bin": {
-    "upgradeps": "./cmd.js"
+    "upgradeps": "./upgradeps.js"
   },
   "dependencies": {
     "chalk": "^2.4.2",
     "command-exists": "^1.2.8",
-    "commander": "^3.0.0",
+    "commander": "^3.0.1",
     "detect-indent": "^6.0.0",
     "figures": "^3.0.0",
     "pacote": "^9.5.8"
-  },
-  "scripts": {
-    "lint": "npx standard --fix"
   },
   "repository": {
     "type": "git",
@@ -27,7 +24,7 @@
     "version"
   ],
   "author": "Luciano Ropero <lropero@gmail.com>",
-  "license": "MIT",
+  "license": "ISC",
   "bugs": {
     "url": "https://github.com/lropero/upgradeps/issues"
   },

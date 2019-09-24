@@ -1,10 +1,26 @@
 #!/usr/bin/env node
+/**
+ * Copyright (c) 2019, Luciano Ropero <lropero@gmail.com>
+ *
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
 const chalk = require('chalk')
 const commander = require('commander')
 const detectIndent = require('detect-indent')
 const { arrowRight, cross, tick } = require('figures')
 const { execSync } = require('child_process')
-const { existsSync, readFileSync, writeFileSync } = require('fs')
+const { existsSync, readFileSync, unlinkSync, writeFileSync } = require('fs')
 const { manifest } = require('pacote')
 const { resolve: pathResolve } = require('path')
 const { sync: commandExistsSync } = require('command-exists')
@@ -66,6 +82,18 @@ const run = async (options) => {
   }
 }
 
+const syncFiles = ({ useYarn }) => {
+  const lockFile = useYarn ? 'yarn.lock' : 'package-lock.json'
+  if (existsSync(pathResolve(process.cwd(), lockFile))) {
+    unlinkSync(lockFile)
+  }
+  if (existsSync(pathResolve(process.cwd(), 'node_modules'))) {
+    const command = useYarn ? 'yarn' : 'npm install'
+    console.log(chalk.gray(`running ${command}`))
+    execSync(command, { stdio: [] })
+  }
+}
+
 const upgrade = async ({ deps, options, packageIndent, packageJSON, packagePath, versions }) => {
   const found = Object.keys(versions)
   let hasUpdates = false
@@ -89,7 +117,8 @@ const upgrade = async ({ deps, options, packageIndent, packageJSON, packagePath,
     if (options.test) {
       console.log(chalk.blue('package.json not upgraded, run without -t option to upgrade'))
     } else {
-      await writePackage({ deps, packageIndent, packageJSON, packagePath, useYarn: commandExistsSync('yarn') && !options.npm })
+      await writePackage({ deps, packageIndent, packageJSON, packagePath })
+      await syncFiles({ useYarn: commandExistsSync('yarn') && !options.npm })
       console.log(chalk.blue('package.json upgraded'))
     }
   } else {
@@ -97,7 +126,7 @@ const upgrade = async ({ deps, options, packageIndent, packageJSON, packagePath,
   }
 }
 
-const writePackage = ({ deps, packageIndent, packageJSON, packagePath, useYarn }) => {
+const writePackage = ({ deps, packageIndent, packageJSON, packagePath }) => {
   if (packageJSON.dependencies) {
     packageJSON.dependencies = deps.dependencies
   }
@@ -106,10 +135,6 @@ const writePackage = ({ deps, packageIndent, packageJSON, packagePath, useYarn }
   }
   const indent = packageIndent.type === 'tab' ? '\t' : packageIndent.amount
   writeFileSync(packagePath, JSON.stringify(packageJSON, null, indent) + '\n', 'utf8')
-  if (existsSync(pathResolve(process.cwd(), 'node_modules'))) {
-    console.log(chalk.gray(`running ${useYarn ? 'yarn' : 'npm install'}`))
-    execSync(useYarn ? 'yarn' : 'npm install', { stdio: [] })
-  }
 }
 
 commander
