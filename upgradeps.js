@@ -78,25 +78,24 @@ const run = async (options) => {
     if (error.stack) {
       console.log(chalk.yellow(error.stack))
     }
-    process.exit(1)
+    process.exit(0)
   }
 }
 
 const syncFiles = ({ options }) => {
   const useYarn = commandExistsSync('yarn') && !options.npm
-  const command = useYarn ? 'yarn' : 'npm install'
-  if (options.modules) {
-    const lockFile = useYarn ? 'yarn.lock' : 'package-lock.json'
-    if (existsSync(pathResolve(process.cwd(), lockFile))) {
-      unlinkSync(lockFile)
-    }
-    if (existsSync(pathResolve(process.cwd(), 'node_modules'))) {
-      const command = useYarn ? 'yarn' : 'npm install'
+  const lockFile = useYarn ? 'yarn.lock' : 'package-lock.json'
+  if (existsSync(pathResolve(process.cwd(), lockFile))) {
+    unlinkSync(lockFile)
+  }
+  if (existsSync(pathResolve(process.cwd(), 'node_modules'))) {
+    const command = useYarn ? 'yarn' : 'npm install'
+    if (options.modules) {
       console.log(chalk.gray(`running ${command}`))
       execSync(command, { stdio: [] })
+    } else {
+      console.log(chalk.yellow(`node_modules not synced, run ${command} to sync files`))
     }
-  } else {
-    console.log(chalk.yellow(`node_modules not synced, run ${command} to sync files`))
   }
 }
 
