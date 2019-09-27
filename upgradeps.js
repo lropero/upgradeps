@@ -93,10 +93,12 @@ const syncFiles = ({ options }) => {
     if (options.modules) {
       console.log(chalk.gray(`running ${command}`))
       execSync(command, { stdio: [] })
+      return true
     } else {
       console.log(chalk.yellow(`node_modules not synced, run ${command} to sync files`))
     }
   }
+  return false
 }
 
 const upgrade = async ({ deps, options, packageIndent, packageJSON, packagePath, versions }) => {
@@ -123,8 +125,8 @@ const upgrade = async ({ deps, options, packageIndent, packageJSON, packagePath,
       console.log(chalk.yellow('package.json not upgraded, run without -t option to upgrade'))
     } else {
       await writePackage({ deps, packageIndent, packageJSON, packagePath })
-      await syncFiles({ options })
-      console.log(chalk.blue(`${options.modules ? 'dependencies' : 'package.json'} upgraded`))
+      const synced = await syncFiles({ options })
+      console.log(chalk.blue(`${synced ? 'dependencies' : 'package.json'} upgraded`))
     }
   } else {
     console.log(chalk.blue('no updates'))
