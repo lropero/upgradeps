@@ -83,8 +83,9 @@ const run = async (options) => {
 }
 
 const syncFiles = ({ options }) => {
+  const useYarn = commandExistsSync('yarn') && !options.npm
+  const command = useYarn ? 'yarn' : 'npm install'
   if (options.modules) {
-    const useYarn = commandExistsSync('yarn') && !options.npm
     const lockFile = useYarn ? 'yarn.lock' : 'package-lock.json'
     if (existsSync(pathResolve(process.cwd(), lockFile))) {
       unlinkSync(lockFile)
@@ -95,7 +96,7 @@ const syncFiles = ({ options }) => {
       execSync(command, { stdio: [] })
     }
   } else {
-    console.log(chalk.yellow('node_modules not synced, run with -m option to sync files'))
+    console.log(chalk.yellow(`node_modules not synced, run ${command} to sync files`))
   }
 }
 
@@ -127,7 +128,6 @@ const upgrade = async ({ deps, options, packageIndent, packageJSON, packagePath,
       console.log(chalk.blue(`${options.modules ? 'dependencies' : 'package.json'} upgraded`))
     }
   } else {
-    options.modules && !options.test && await syncFiles({ options })
     console.log(chalk.blue('no updates'))
   }
 }
