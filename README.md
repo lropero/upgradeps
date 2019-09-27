@@ -9,7 +9,7 @@ npx upgradeps
 
 ### Options
 ##### `-m` / `--modules`
-Sync node_modules
+Sync node_modules if updates
 ```sh
 npx upgradeps -m
 ```

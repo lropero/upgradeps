@@ -145,7 +145,7 @@ const writePackage = ({ deps, packageIndent, packageJSON, packagePath }) => {
 
 commander
   .version(version, '-v, --version')
-  .option('-m, --modules', 'Sync node_modules')
+  .option('-m, --modules', 'Sync node_modules if updates')
   .option('-n, --npm', 'Force npm instead of yarn')
   .option('-s, --skip <packages>', 'Skip packages')
   .option('-t, --test', 'Query versions without upgrading')
