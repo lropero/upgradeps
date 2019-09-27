@@ -82,15 +82,20 @@ const run = async (options) => {
   }
 }
 
-const syncFiles = ({ useYarn }) => {
-  const lockFile = useYarn ? 'yarn.lock' : 'package-lock.json'
-  if (existsSync(pathResolve(process.cwd(), lockFile))) {
-    unlinkSync(lockFile)
-  }
-  if (existsSync(pathResolve(process.cwd(), 'node_modules'))) {
-    const command = useYarn ? 'yarn' : 'npm install'
-    console.log(chalk.gray(`running ${command}`))
-    execSync(command, { stdio: [] })
+const syncFiles = ({ options }) => {
+  if (options.modules) {
+    const useYarn = commandExistsSync('yarn') && !options.npm
+    const lockFile = useYarn ? 'yarn.lock' : 'package-lock.json'
+    if (existsSync(pathResolve(process.cwd(), lockFile))) {
+      unlinkSync(lockFile)
+    }
+    if (existsSync(pathResolve(process.cwd(), 'node_modules'))) {
+      const command = useYarn ? 'yarn' : 'npm install'
+      console.log(chalk.gray(`running ${command}`))
+      execSync(command, { stdio: [] })
+    }
+  } else {
+    console.log(chalk.yellow('node_modules not synced, run with -m option to sync files'))
   }
 }
 
@@ -115,13 +120,14 @@ const upgrade = async ({ deps, options, packageIndent, packageJSON, packagePath,
   }
   if (hasUpdates) {
     if (options.test) {
-      console.log(chalk.blue('package.json not upgraded, run without -t option to upgrade'))
+      console.log(chalk.yellow('package.json not upgraded, run without -t option to upgrade'))
     } else {
       await writePackage({ deps, packageIndent, packageJSON, packagePath })
-      await syncFiles({ useYarn: commandExistsSync('yarn') && !options.npm })
-      console.log(chalk.blue('package.json upgraded'))
+      await syncFiles({ options })
+      console.log(chalk.blue(`${options.modules ? 'dependencies' : 'package.json'} upgraded`))
     }
   } else {
+    options.modules && !options.test && await syncFiles({ options })
     console.log(chalk.blue('no updates'))
   }
 }
@@ -139,8 +145,14 @@ const writePackage = ({ deps, packageIndent, packageJSON, packagePath }) => {
 
 commander
   .version(version, '-v, --version')
+  .option('-m, --modules', 'Sync node_modules')
   .option('-n, --npm', 'Force npm instead of yarn')
   .option('-s, --skip <packages>', 'Skip packages')
   .option('-t, --test', 'Query versions without upgrading')
   .parse(process.argv)
-run({ npm: !!commander.npm, skip: (commander.skip || '').split(','), test: !!commander.test })
+run({
+  modules: !!commander.modules,
+  npm: !!commander.npm,
+  skip: (commander.skip || '').split(','),
+  test: !!commander.test
+})

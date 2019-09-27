@@ -8,6 +8,11 @@ npx upgradeps
 ```
 
 ### Options
+##### `-m` / `--modules`
+Sync node_modules
+```sh
+npx upgradeps -m
+```
 ##### `-n` / `--npm`
 Force npm instead of yarn
 ```sh

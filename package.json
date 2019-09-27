@@ -1,6 +1,6 @@
 {
   "name": "upgradeps",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "description": "Blazingly fast command-line utility to upgrade all dependencies in package.json to latest version, potentially updating packages across major versions.",
   "main": "upgradeps.js",
   "bin": {
@@ -9,7 +9,7 @@
   "dependencies": {
     "chalk": "^2.4.2",
     "command-exists": "^1.2.8",
-    "commander": "^3.0.1",
+    "commander": "^3.0.2",
     "detect-indent": "^6.0.0",
     "figures": "^3.0.0",
     "pacote": "^9.5.8"
