@@ -83,12 +83,13 @@ const run = async (options) => {
 }
 
 const syncFiles = ({ options }) => {
-  const useYarn = commandExistsSync('yarn') && !options.npm
-  const lockFile = useYarn ? 'yarn.lock' : 'package-lock.json'
-  if (existsSync(pathResolve(process.cwd(), lockFile))) {
-    unlinkSync(lockFile)
+  for (const lockFile of ['package-lock.json', 'yarn.lock']) {
+    if (existsSync(pathResolve(process.cwd(), lockFile))) {
+      unlinkSync(lockFile)
+    }
   }
   if (existsSync(pathResolve(process.cwd(), 'node_modules'))) {
+    const useYarn = commandExistsSync('yarn') && !options.npm
     const command = useYarn ? 'yarn' : 'npm install'
     if (options.modules) {
       console.log(chalk.gray(`running ${command}`))
@@ -151,6 +152,7 @@ commander
   .option('-s, --skip <packages>', 'Skip packages')
   .option('-t, --test', 'Query versions without upgrading')
   .parse(process.argv)
+
 run({
   modules: !!commander.modules,
   npm: !!commander.npm,
