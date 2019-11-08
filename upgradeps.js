@@ -75,9 +75,6 @@ const run = async (options) => {
     await upgrade({ deps, options, packageIndent, packageJSON, packagePath, versions })
   } catch (error) {
     console.log(`${chalk.red(cross)} ${errorToString(error)}`)
-    if (error.stack) {
-      console.log(chalk.yellow(error.stack))
-    }
     process.exit(0)
   }
 }
