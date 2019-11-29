@@ -71,7 +71,7 @@ const run = async (options) => {
   try {
     console.log(chalk.green(`upgradeps v${version}`))
     const { deps, packageIndent, packageJSON, packagePath, pckgs } = getInfo()
-    const versions = await queryVersions({ pckgs, registry: options.registry.toString() })
+    const versions = await queryVersions({ pckgs, registry: options.registry })
     await upgrade({ deps, options, packageIndent, packageJSON, packagePath, versions })
   } catch (error) {
     console.log(`${chalk.red(cross)} ${errorToString(error)}`)
@@ -146,7 +146,7 @@ commander
   .version(version, '-v, --version')
   .option('-m, --modules', 'Sync node_modules if updates')
   .option('-n, --npm', 'Force npm instead of yarn')
-  .option('-r, --registry', 'Set the npm registry to use')
+  .option('-r, --registry <registry>', 'Set the npm registry to use')
   .option('-s, --skip <packages>', 'Skip packages')
   .option('-t, --test', 'Query versions without upgrading')
   .parse(process.argv)
