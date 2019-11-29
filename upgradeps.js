@@ -51,11 +51,11 @@ const getInfo = () => {
   }
 }
 
-const queryVersions = async (pckgs) => {
+const queryVersions = async ({ pckgs, registry }) => {
   console.log(chalk.gray('querying versions'))
   const responses = await Promise.all(pckgs.map(async (pckg) => {
     try {
-      const { version = false } = await manifest(pckg)
+      const { version = false } = await manifest(pckg, { registry })
       return { [pckg]: version }
     } catch (error) {
       if (error.statusCode === 404) {
@@ -71,7 +71,7 @@ const run = async (options) => {
   try {
     console.log(chalk.green(`upgradeps v${version}`))
     const { deps, packageIndent, packageJSON, packagePath, pckgs } = getInfo()
-    const versions = await queryVersions(pckgs)
+    const versions = await queryVersions({ pckgs, registry: options.registry })
     await upgrade({ deps, options, packageIndent, packageJSON, packagePath, versions })
   } catch (error) {
     console.log(`${chalk.red(cross)} ${errorToString(error)}`)
@@ -146,6 +146,7 @@ commander
   .version(version, '-v, --version')
   .option('-m, --modules', 'Sync node_modules if updates')
   .option('-n, --npm', 'Force npm instead of yarn')
+  .option('-r, --registry', 'Set the npm registry to use')
   .option('-s, --skip <packages>', 'Skip packages')
   .option('-t, --test', 'Query versions without upgrading')
   .parse(process.argv)
@@ -153,6 +154,7 @@ commander
 run({
   modules: !!commander.modules,
   npm: !!commander.npm,
+  registry: commander.registry || 'https://registry.npmjs.org/',
   skip: (commander.skip || '').split(','),
   test: !!commander.test
 })

@@ -18,6 +18,11 @@ Force npm instead of yarn
 ```sh
 npx upgradeps -n
 ```
+##### `-r` / `--registry`
+Set the npm registry to use
+```sh
+npx upgradeps -r https://registry.npmjs.org/
+```
 ##### `-s` / `--skip`
 Skip packages
 ```sh
