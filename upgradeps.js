@@ -71,7 +71,7 @@ const run = async (options) => {
   try {
     console.log(chalk.green(`upgradeps v${version}`))
     const { deps, packageIndent, packageJSON, packagePath, pckgs } = getInfo()
-    const versions = await queryVersions({ pckgs, registry: options.registry })
+    const versions = await queryVersions({ pckgs, registry: options.registry.toString() })
     await upgrade({ deps, options, packageIndent, packageJSON, packagePath, versions })
   } catch (error) {
     console.log(`${chalk.red(cross)} ${errorToString(error)}`)
