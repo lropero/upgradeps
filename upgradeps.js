@@ -18,7 +18,7 @@
 const chalk = require('chalk')
 const commander = require('commander')
 const detectIndent = require('detect-indent')
-const { arrowRight, cross, tick } = require('figures')
+const { arrowRight, cross, line, tick } = require('figures')
 const { execSync } = require('child_process')
 const { existsSync, readFileSync, unlinkSync, writeFileSync } = require('fs')
 const { manifest } = require('pacote')
@@ -26,15 +26,6 @@ const { resolve: pathResolve } = require('path')
 const { sync: commandExistsSync } = require('command-exists')
 
 const { version } = require('./package.json')
-
-const errorToString = (error) => {
-  if (!(error instanceof Error)) {
-    error = new Error(error.toString())
-  }
-  error.name = ''
-  const string = error.toString()
-  return string.charAt(0).toUpperCase() + string.slice(1)
-}
 
 const getInfo = () => {
   const packagePath = pathResolve(process.cwd(), 'package.json')
@@ -52,10 +43,10 @@ const getInfo = () => {
 }
 
 const queryVersions = async ({ pckgs, registry }) => {
-  console.log(chalk.gray('querying versions'))
+  console.log(chalk.blue('querying versions'))
   const responses = await Promise.all(pckgs.map(async (pckg) => {
     try {
-      const { version = false } = await manifest(pckg, { registry })
+      const { version = false } = registry.length ? await manifest(pckg, { registry }) : await manifest(pckg)
       return { [pckg]: version }
     } catch (error) {
       if (error.statusCode === 404) {
@@ -69,37 +60,38 @@ const queryVersions = async ({ pckgs, registry }) => {
 
 const run = async (options) => {
   try {
-    console.log(chalk.green(`upgradeps v${version}`))
+    console.log(`${chalk.green(`upgradeps v${version}`)} ${chalk.gray(`${line} run with -h option to output usage information`)}`)
     const { deps, packageIndent, packageJSON, packagePath, pckgs } = getInfo()
     const versions = await queryVersions({ pckgs, registry: options.registry })
     await upgrade({ deps, options, packageIndent, packageJSON, packagePath, versions })
   } catch (error) {
-    console.log(`${chalk.red(cross)} ${errorToString(error)}`)
+    console.error(`${chalk.red(cross)} ${error.toString()}`)
     process.exit(0)
   }
 }
 
-const syncFiles = ({ options }) => {
+const syncFiles = ({ modules, npm }) => {
   for (const lockFile of ['package-lock.json', 'yarn.lock']) {
     if (existsSync(pathResolve(process.cwd(), lockFile))) {
       unlinkSync(lockFile)
     }
   }
   if (existsSync(pathResolve(process.cwd(), 'node_modules'))) {
-    const useYarn = commandExistsSync('yarn') && !options.npm
+    const useYarn = commandExistsSync('yarn') && !npm
     const command = useYarn ? 'yarn' : 'npm install'
-    if (options.modules) {
-      console.log(chalk.gray(`running ${command}`))
+    if (modules) {
+      console.log(chalk.blue(`running '${command}'`))
       execSync(command, { stdio: [] })
       return true
     } else {
-      console.log(chalk.yellow(`node_modules not synced, run ${command} to sync files`))
+      console.log(chalk.yellow(`node_modules not synced, run '${command}' to sync files`))
     }
   }
   return false
 }
 
 const upgrade = async ({ deps, options, packageIndent, packageJSON, packagePath, versions }) => {
+  const { modules, npm, query, skip } = options
   const found = Object.keys(versions)
   let hasUpdates = false
   for (const group of Object.keys(deps)) {
@@ -108,22 +100,22 @@ const upgrade = async ({ deps, options, packageIndent, packageJSON, packagePath,
         const current = deps[group][pckg].replace(/[\^~]/, '').trim()
         const latest = versions[pckg]
         if (current !== latest) {
-          const skips = options.skip.includes(pckg)
+          const skips = skip.includes(pckg)
           if (!skips) {
             deps[group][pckg] = `^${latest}`
             hasUpdates = true
           }
-          console.log(`${chalk.cyan(pckg)} ${skips || options.test ? chalk.yellow(cross) : chalk.green(tick)} ${current} ${chalk.yellow(arrowRight)} ${latest}`)
+          console.log(`${chalk.cyan(pckg)} ${query || skips ? chalk.yellow(cross) : chalk.green(tick)} ${current} ${chalk.yellow(arrowRight)} ${latest}`)
         }
       }
     }
   }
   if (hasUpdates) {
-    if (options.test) {
-      console.log(chalk.yellow('package.json not upgraded, run without -t option to upgrade'))
+    if (query) {
+      console.log(chalk.yellow('package.json not upgraded, run without -q option to upgrade'))
     } else {
       await writePackage({ deps, packageIndent, packageJSON, packagePath })
-      const synced = await syncFiles({ options })
+      const synced = await syncFiles({ modules, npm })
       console.log(chalk.blue(`${synced ? 'dependencies' : 'package.json'} upgraded`))
     }
   } else {
@@ -143,18 +135,17 @@ const writePackage = ({ deps, packageIndent, packageJSON, packagePath }) => {
 }
 
 commander
-  .version(version, '-v, --version')
-  .option('-m, --modules', 'Sync node_modules if updates')
-  .option('-n, --npm', 'Force npm instead of yarn')
-  .option('-r, --registry <registry>', 'Set the npm registry to use')
-  .option('-s, --skip <packages>', 'Skip packages')
-  .option('-t, --test', 'Query versions without upgrading')
+  .option('-m, --modules', 'sync node_modules if updates')
+  .option('-n, --npm', 'use npm instead of yarn')
+  .option('-q, --query', 'query versions without upgrading')
+  .option('-r, --registry <registry>', 'set the npm registry to use')
+  .option('-s, --skip <packages>', 'skip packages')
   .parse(process.argv)
 
 run({
   modules: !!commander.modules,
   npm: !!commander.npm,
-  registry: commander.registry || 'https://registry.npmjs.org/',
-  skip: (commander.skip || '').split(','),
-  test: !!commander.test
+  query: !!commander.query,
+  registry: commander.registry || '',
+  skip: (commander.skip || '').split(',')
 })

@@ -14,9 +14,14 @@ Sync node_modules if updates
 npx upgradeps -m
 ```
 ##### `-n` / `--npm`
-Force npm instead of yarn
+Use npm instead of yarn
 ```sh
 npx upgradeps -n
+```
+##### `-q` / `--query`
+Query versions without upgrading (dry run)
+```sh
+npx upgradeps -q
 ```
 ##### `-r` / `--registry`
 Set the npm registry to use
@@ -27,9 +32,4 @@ npx upgradeps -r https://registry.npmjs.org/
 Skip packages
 ```sh
 npx upgradeps -s react,react-dom
-```
-##### `-t` / `--test`
-Query versions without upgrading (dry run)
-```sh
-npx upgradeps -t
 ```
