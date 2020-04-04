@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Copyright (c) 2019, Luciano Ropero <lropero@gmail.com>
+ * Copyright (c) 2020, Luciano Ropero <lropero@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -17,6 +17,7 @@
 
 const chalk = require('chalk')
 const commander = require('commander')
+const compareVersions = require('compare-versions')
 const detectIndent = require('detect-indent')
 const { arrowRight, cross, line, tick } = require('figures')
 const { execSync } = require('child_process')
@@ -99,7 +100,7 @@ const upgrade = async ({ deps, options, packageIndent, packageJSON, packagePath,
       if (found.includes(pckg)) {
         const current = deps[group][pckg].replace(/[\^~]/, '').trim()
         const latest = versions[pckg]
-        if (current !== latest) {
+        if (compareVersions(latest, current, '>')) {
           const skips = skip.includes(pckg)
           if (!skips) {
             deps[group][pckg] = `^${latest}`
@@ -137,7 +138,7 @@ const writePackage = ({ deps, packageIndent, packageJSON, packagePath }) => {
 commander
   .option('-m, --modules', 'sync node_modules if updates')
   .option('-n, --npm', 'use npm instead of yarn')
-  .option('-q, --query', 'query versions without upgrading')
+  .option('-q, --query', 'query versions without upgrading (dry run)')
   .option('-r, --registry <registry>', 'set the npm registry to use')
   .option('-s, --skip <packages>', 'skip packages')
   .parse(process.argv)
