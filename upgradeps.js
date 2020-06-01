@@ -71,7 +71,7 @@ const run = async (options) => {
   }
 }
 
-const syncFiles = ({ modules, npm }) => {
+const syncModules = ({ modules, npm, registry }) => {
   for (const lockFile of ['package-lock.json', 'yarn.lock']) {
     if (existsSync(pathResolve(process.cwd(), lockFile))) {
       unlinkSync(lockFile)
@@ -79,7 +79,7 @@ const syncFiles = ({ modules, npm }) => {
   }
   if (existsSync(pathResolve(process.cwd(), 'node_modules'))) {
     const useYarn = commandExistsSync('yarn') && !npm
-    const command = useYarn ? 'yarn' : 'npm install'
+    const command = `${useYarn ? 'yarn' : 'npm install'}${registry.length ? ' --registry ' + registry : ''}`
     if (modules) {
       console.log(chalk.blue(`running '${command}'`))
       execSync(command, { stdio: [] })
@@ -92,7 +92,7 @@ const syncFiles = ({ modules, npm }) => {
 }
 
 const upgrade = async ({ deps, options, packageIndent, packageJSON, packagePath, versions }) => {
-  const { modules, npm, query, skip } = options
+  const { modules, npm, query, registry, skip } = options
   const found = Object.keys(versions)
   let hasUpdates = false
   for (const group of Object.keys(deps)) {
@@ -116,7 +116,7 @@ const upgrade = async ({ deps, options, packageIndent, packageJSON, packagePath,
       console.log(chalk.yellow('package.json not upgraded, run without -q option to upgrade'))
     } else {
       await writePackage({ deps, packageIndent, packageJSON, packagePath })
-      const synced = await syncFiles({ modules, npm })
+      const synced = await syncModules({ modules, npm, registry })
       console.log(chalk.blue(`${synced ? 'dependencies' : 'package.json'} upgraded`))
     }
   } else {
