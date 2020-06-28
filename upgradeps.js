@@ -100,7 +100,7 @@ const upgrade = async ({ deps, options, packageIndent, packageJSON, packagePath,
       if (found.includes(pckg)) {
         const current = deps[group][pckg].replace(/[\^~]/, '').trim()
         const latest = versions[pckg]
-        if (compareVersions(latest, current, '>')) {
+        if (compareVersions.validate(current) && compareVersions(current, latest, '<')) {
           const skips = skip.includes(pckg)
           if (!skips) {
             deps[group][pckg] = `^${latest}`
