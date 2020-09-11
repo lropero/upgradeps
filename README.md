@@ -12,6 +12,14 @@ npx upgradeps
 
 ### Options
 
+##### `-d` / `--dev`
+
+Upgrade devDependencies only
+
+```sh
+npx upgradeps -d
+```
+
 ##### `-m` / `--modules`
 
 Sync node_modules if updates

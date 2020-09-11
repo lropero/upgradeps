@@ -28,7 +28,8 @@ const { sync: commandExistsSync } = require('command-exists')
 
 const { version } = require('./package.json')
 
-const getInfo = () => {
+const getInfo = options => {
+  const { dev } = options
   const packagePath = pathResolve(process.cwd(), 'package.json')
   const packageContents = readFileSync(packagePath, 'utf8')
   const packageIndent = detectIndent(packageContents)
@@ -39,31 +40,34 @@ const getInfo = () => {
     packageIndent,
     packageJSON,
     packagePath,
-    pckgs: Object.keys(dependencies).concat(Object.keys(devDependencies))
+    pckgs: dev ? Object.keys(devDependencies) : [...Object.keys(dependencies), ...Object.keys(devDependencies)]
   }
 }
 
-const queryVersions = async ({ pckgs, registry }) => {
-  console.log(chalk.blue('querying versions'))
-  const responses = await Promise.all(pckgs.map(async (pckg) => {
-    try {
-      const { version = false } = registry.length ? await manifest(pckg, { registry }) : await manifest(pckg)
-      return { [pckg]: version }
-    } catch (error) {
-      if (error.statusCode === 404) {
-        return { [pckg]: false }
+const queryVersions = async ({ options, pckgs }) => {
+  const { dev, registry } = options
+  console.log(chalk.blue(`querying versions${dev ? ' (devDependencies only)' : ''}`))
+  const responses = await Promise.all(
+    pckgs.map(async pckg => {
+      try {
+        const { version = false } = registry.length ? await manifest(pckg, { registry }) : await manifest(pckg)
+        return { [pckg]: version }
+      } catch (error) {
+        if (error.statusCode === 404) {
+          return { [pckg]: false }
+        }
+        throw error
       }
-      throw error
-    }
-  }))
-  return responses.reduce((versions, response) => Object.values(response)[0] ? { ...versions, ...response } : versions, {})
+    })
+  )
+  return responses.reduce((versions, response) => (Object.values(response)[0] ? { ...versions, ...response } : versions), {})
 }
 
-const run = async (options) => {
+const run = async options => {
   try {
     console.log(`${chalk.green(`upgradeps v${version}`)} ${chalk.gray(`${line} run with -h option to output usage information`)}`)
-    const { deps, packageIndent, packageJSON, packagePath, pckgs } = getInfo()
-    const versions = await queryVersions({ pckgs, registry: options.registry })
+    const { deps, packageIndent, packageJSON, packagePath, pckgs } = getInfo(options)
+    const versions = await queryVersions({ options, pckgs })
     await upgrade({ deps, options, packageIndent, packageJSON, packagePath, versions })
   } catch (error) {
     console.error(`${chalk.red(cross)} ${error.toString()}`)
@@ -71,7 +75,8 @@ const run = async (options) => {
   }
 }
 
-const syncModules = ({ modules, npm, registry }) => {
+const syncModules = options => {
+  const { modules, npm, registry } = options
   for (const lockFile of ['package-lock.json', 'yarn.lock']) {
     if (existsSync(pathResolve(process.cwd(), lockFile))) {
       unlinkSync(lockFile)
@@ -92,7 +97,7 @@ const syncModules = ({ modules, npm, registry }) => {
 }
 
 const upgrade = async ({ deps, options, packageIndent, packageJSON, packagePath, versions }) => {
-  const { modules, npm, query, registry, skip } = options
+  const { query, skip } = options
   const found = Object.keys(versions)
   let hasUpdates = false
   for (const group of Object.keys(deps)) {
@@ -116,7 +121,7 @@ const upgrade = async ({ deps, options, packageIndent, packageJSON, packagePath,
       console.log(chalk.yellow('package.json not upgraded, run without -q option to upgrade'))
     } else {
       await writePackage({ deps, packageIndent, packageJSON, packagePath })
-      const synced = await syncModules({ modules, npm, registry })
+      const synced = await syncModules(options)
       console.log(chalk.blue(`${synced ? 'dependencies' : 'package.json'} upgraded`))
     }
   } else {
@@ -136,6 +141,7 @@ const writePackage = ({ deps, packageIndent, packageJSON, packagePath }) => {
 }
 
 commander
+  .option('-d, --dev', 'upgrade devDependencies only')
   .option('-m, --modules', 'sync node_modules if updates')
   .option('-n, --npm', 'use npm instead of yarn')
   .option('-q, --query', 'query versions without upgrading (dry run)')
@@ -144,6 +150,7 @@ commander
   .parse(process.argv)
 
 run({
+  dev: !!commander.dev,
   modules: !!commander.modules,
   npm: !!commander.npm,
   query: !!commander.query,
