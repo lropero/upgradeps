@@ -16,13 +16,13 @@
  */
 
 const chalk = require('chalk')
-const commander = require('commander')
 const compareVersions = require('compare-versions')
 const detectIndent = require('detect-indent')
 const { arrowRight, cross, line, tick } = require('figures')
 const { execSync } = require('child_process')
 const { existsSync, readFileSync, unlinkSync, writeFileSync } = require('fs')
 const { manifest } = require('pacote')
+const { program } = require('commander')
 const { resolve: pathResolve } = require('path')
 const { sync: commandExistsSync } = require('command-exists')
 
@@ -140,7 +140,7 @@ const writePackage = ({ deps, packageIndent, packageJSON, packagePath }) => {
   writeFileSync(packagePath, JSON.stringify(packageJSON, null, indent) + '\n', 'utf8')
 }
 
-commander
+program
   .option('-d, --dev', 'upgrade devDependencies only')
   .option('-m, --modules', 'sync node_modules if updates')
   .option('-n, --npm', 'use npm instead of yarn')
@@ -149,11 +149,13 @@ commander
   .option('-s, --skip <packages>', 'skip packages')
   .parse(process.argv)
 
+const options = program.opts()
+
 run({
-  dev: !!commander.dev,
-  modules: !!commander.modules,
-  npm: !!commander.npm,
-  query: !!commander.query,
-  registry: commander.registry || '',
-  skip: (commander.skip || '').split(',')
+  dev: !!options.dev,
+  modules: !!options.modules,
+  npm: !!options.npm,
+  query: !!options.query,
+  registry: options.registry || '',
+  skip: (options.skip || '').split(',')
 })
