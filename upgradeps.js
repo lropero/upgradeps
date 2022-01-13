@@ -19,13 +19,14 @@ import chalk from 'chalk'
 import compareVersions from 'compare-versions'
 import detectIndent from 'detect-indent'
 import figures from 'figures'
-import jsonfile from 'jsonfile'
 import pacote from 'pacote'
 import { execSync } from 'child_process'
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
 import { program } from 'commander'
 import { resolve as pathResolve } from 'path'
 import { sync as commandExistsSync } from 'command-exists'
+
+const VERSION = '1.5.0'
 
 const getInfo = options => {
   const { dev } = options
@@ -64,8 +65,7 @@ const queryVersions = async ({ options, pckgs }) => {
 
 const run = async options => {
   try {
-    const { version } = await jsonfile.readFile('package.json')
-    console.log(`${chalk.green(`upgradeps v${version}`)} ${chalk.gray(`${figures.line} run with -h to output usage information`)}`)
+    console.log(`${chalk.green(`upgradeps v${VERSION}`)} ${chalk.gray(`${figures.line} run with -h to output usage information`)}`)
     const { deps, packageIndent, packageJSON, packagePath, pckgs } = getInfo(options)
     const versions = await queryVersions({ options, pckgs })
     await upgrade({ deps, options, packageIndent, packageJSON, packagePath, versions })
