@@ -15,18 +15,17 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-const chalk = require('chalk')
-const compareVersions = require('compare-versions')
-const detectIndent = require('detect-indent')
-const { arrowRight, cross, line, tick } = require('figures')
-const { execSync } = require('child_process')
-const { existsSync, readFileSync, unlinkSync, writeFileSync } = require('fs')
-const { manifest } = require('pacote')
-const { program } = require('commander')
-const { resolve: pathResolve } = require('path')
-const { sync: commandExistsSync } = require('command-exists')
-
-const { version } = require('./package.json')
+import chalk from 'chalk'
+import compareVersions from 'compare-versions'
+import detectIndent from 'detect-indent'
+import figures from 'figures'
+import jsonfile from 'jsonfile'
+import pacote from 'pacote'
+import { execSync } from 'child_process'
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
+import { program } from 'commander'
+import { resolve as pathResolve } from 'path'
+import { sync as commandExistsSync } from 'command-exists'
 
 const getInfo = options => {
   const { dev } = options
@@ -50,7 +49,7 @@ const queryVersions = async ({ options, pckgs }) => {
   const responses = await Promise.all(
     pckgs.map(async pckg => {
       try {
-        const { version = false } = registry.length ? await manifest(pckg, { registry }) : await manifest(pckg)
+        const { version = false } = registry.length ? await pacote.manifest(pckg, { registry }) : await pacote.manifest(pckg)
         return { [pckg]: version }
       } catch (error) {
         if (error.statusCode === 404) {
@@ -65,12 +64,13 @@ const queryVersions = async ({ options, pckgs }) => {
 
 const run = async options => {
   try {
-    console.log(`${chalk.green(`upgradeps v${version}`)} ${chalk.gray(`${line} run with -h option to output usage information`)}`)
+    const { version } = await jsonfile.readFile('./package.json')
+    console.log(`${chalk.green(`upgradeps v${version}`)} ${chalk.gray(`${figures.line} run with -h to output usage information`)}`)
     const { deps, packageIndent, packageJSON, packagePath, pckgs } = getInfo(options)
     const versions = await queryVersions({ options, pckgs })
     await upgrade({ deps, options, packageIndent, packageJSON, packagePath, versions })
   } catch (error) {
-    console.error(`${chalk.red(cross)} ${error.toString()}`)
+    console.error(`${chalk.red(figures.cross)} ${error.toString()}`)
     process.exit(0)
   }
 }
@@ -111,7 +111,7 @@ const upgrade = async ({ deps, options, packageIndent, packageJSON, packagePath,
             deps[group][pckg] = `^${latest}`
             hasUpdates = true
           }
-          console.log(`${chalk.cyan(pckg)} ${query || skips ? chalk.yellow(cross) : chalk.green(tick)} ${current} ${chalk.yellow(arrowRight)} ${latest}`)
+          console.log(`${chalk.cyan(pckg)} ${query || skips ? chalk.yellow(figures.cross) : chalk.green(figures.tick)} ${current} ${chalk.yellow(figures.arrowRight)} ${latest}`)
         }
       }
     }
