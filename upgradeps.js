@@ -64,7 +64,7 @@ const queryVersions = async ({ options, pckgs }) => {
 
 const run = async options => {
   try {
-    const { version } = await jsonfile.readFile('./package.json')
+    const { version } = await jsonfile.readFile('package.json')
     console.log(`${chalk.green(`upgradeps v${version}`)} ${chalk.gray(`${figures.line} run with -h to output usage information`)}`)
     const { deps, packageIndent, packageJSON, packagePath, pckgs } = getInfo(options)
     const versions = await queryVersions({ options, pckgs })
