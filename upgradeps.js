@@ -16,17 +16,15 @@
  */
 
 import chalk from 'chalk'
-import compareVersions from 'compare-versions'
 import detectIndent from 'detect-indent'
 import figures from 'figures'
 import pacote from 'pacote'
+import semverDiff from 'semver-diff'
 import { execSync } from 'child_process'
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
 import { program } from 'commander'
 import { resolve as pathResolve } from 'path'
 import { sync as commandExistsSync } from 'command-exists'
-
-const VERSION = '1.5.0'
 
 const getInfo = options => {
   const { dev } = options
@@ -34,13 +32,14 @@ const getInfo = options => {
   const packageContents = readFileSync(packagePath, 'utf8')
   const packageIndent = detectIndent(packageContents)
   const packageJSON = JSON.parse(packageContents)
-  const { dependencies = {}, devDependencies = {} } = packageJSON
+  const { dependencies = {}, devDependencies = {}, version } = packageJSON
   return {
     deps: { dependencies, devDependencies },
     packageIndent,
     packageJSON,
     packagePath,
-    pckgs: dev ? Object.keys(devDependencies) : [...Object.keys(dependencies), ...Object.keys(devDependencies)]
+    pckgs: dev ? Object.keys(devDependencies) : [...Object.keys(dependencies), ...Object.keys(devDependencies)],
+    version
   }
 }
 
@@ -65,8 +64,8 @@ const queryVersions = async ({ options, pckgs }) => {
 
 const run = async options => {
   try {
-    console.log(`${chalk.green(`upgradeps v${VERSION}`)} ${chalk.gray(`${figures.line} run with -h to output usage information`)}`)
-    const { deps, packageIndent, packageJSON, packagePath, pckgs } = getInfo(options)
+    const { deps, packageIndent, packageJSON, packagePath, pckgs, version } = getInfo(options)
+    console.log(`${chalk.green(`upgradeps v${version}`)} ${chalk.gray(`${figures.line} run with -h to output usage information`)}`)
     const versions = await queryVersions({ options, pckgs })
     await upgrade({ deps, options, packageIndent, packageJSON, packagePath, versions })
   } catch (error) {
@@ -76,14 +75,14 @@ const run = async options => {
 }
 
 const syncModules = options => {
-  const { modules, npm, registry } = options
+  const { modules, registry, yarn } = options
   for (const lockFile of ['package-lock.json', 'yarn.lock']) {
     if (existsSync(pathResolve(process.cwd(), lockFile))) {
       unlinkSync(lockFile)
     }
   }
   if (existsSync(pathResolve(process.cwd(), 'node_modules'))) {
-    const useYarn = commandExistsSync('yarn') && !npm
+    const useYarn = yarn && commandExistsSync('yarn')
     const command = `${useYarn ? 'yarn' : 'npm install'}${registry.length ? ' --registry ' + registry : ''}`
     if (modules) {
       console.log(chalk.blue(`running '${command}'`))
@@ -97,7 +96,8 @@ const syncModules = options => {
 }
 
 const upgrade = async ({ deps, options, packageIndent, packageJSON, packagePath, versions }) => {
-  const { query, skip } = options
+  const { patch, query, skip } = options
+  const differenceTypes = ['build', 'major', 'minor', 'patch', 'premajor', 'preminor', 'prepatch', 'prerelease']
   const found = Object.keys(versions)
   let hasUpdates = false
   for (const group of Object.keys(deps)) {
@@ -105,13 +105,14 @@ const upgrade = async ({ deps, options, packageIndent, packageJSON, packagePath,
       if (found.includes(pckg)) {
         const current = deps[group][pckg].replace(/[\^~]/, '').trim()
         const latest = versions[pckg]
-        if (compareVersions.validate(current) && compareVersions(current, latest, '<')) {
-          const skips = skip.includes(pckg)
+        const differenceType = semverDiff(current, latest)
+        if (differenceTypes.includes(differenceType)) {
+          const skips = skip.includes(pckg) || (patch && differenceTypes.filter(type => type.slice(-5) === 'major').includes(differenceType))
           if (!skips) {
             deps[group][pckg] = `^${latest}`
             hasUpdates = true
           }
-          console.log(`${chalk.cyan(pckg)} ${query || skips ? chalk.yellow(figures.cross) : chalk.green(figures.tick)} ${current} ${chalk.yellow(figures.arrowRight)} ${latest}`)
+          console.log(`${chalk.cyan(pckg)} ${query || skips ? chalk.yellow(figures.cross) : chalk.green(figures.tick)} ${current} ${chalk.yellow(figures.arrowRight)} ${latest} ${chalk.magenta(differenceType)}`)
         }
       }
     }
@@ -143,10 +144,11 @@ const writePackage = ({ deps, packageIndent, packageJSON, packagePath }) => {
 program
   .option('-d, --dev', 'upgrade devDependencies only')
   .option('-m, --modules', 'sync node_modules if updates')
-  .option('-n, --npm', 'use npm instead of yarn')
+  .option('-p, --patch', 'skip major version upgrades')
   .option('-q, --query', 'query versions without upgrading (dry run)')
   .option('-r, --registry <registry>', 'set the npm registry to use')
   .option('-s, --skip <packages>', 'skip packages')
+  .option('-y, --yarn', 'use yarn instead of npm')
   .parse(process.argv)
 
 const options = program.opts()
@@ -154,8 +156,9 @@ const options = program.opts()
 run({
   dev: !!options.dev,
   modules: !!options.modules,
-  npm: !!options.npm,
+  patch: !!options.patch,
   query: !!options.query,
   registry: options.registry || '',
-  skip: (options.skip || '').split(',')
+  skip: (options.skip || '').split(','),
+  yarn: !!options.yarn
 })

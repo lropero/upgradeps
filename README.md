@@ -1,6 +1,6 @@
 # upgradeps &middot; [![npm version](https://badge.fury.io/js/upgradeps.svg)](https://www.npmjs.com/package/upgradeps)&nbsp;[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 
-Blazingly fast command-line utility to **upgra**de all **dep**endencie**s** in package.json to latest version, potentially updating packages across major versions. Uses yarn when available, npm otherwise.
+Blazingly fast command-line utility to **upgra**de all **dep**endencie**s** in package.json to latest version, potentially updating packages across major versions.
 
 ### Installation and usage
 
@@ -28,12 +28,12 @@ Sync node_modules if updates
 npx upgradeps -m
 ```
 
-##### `-n` / `--npm`
+##### `-p` / `--patch`
 
-Use npm instead of yarn
+Skip major version upgrades
 
 ```sh
-npx upgradeps -n
+npx upgradeps -p
 ```
 
 ##### `-q` / `--query`
@@ -58,4 +58,12 @@ Skip packages
 
 ```sh
 npx upgradeps -s react,react-dom
+```
+
+##### `-y` / `--yarn`
+
+Use yarn instead of npm
+
+```sh
+npx upgradeps -y
 ```
