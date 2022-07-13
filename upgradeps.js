@@ -26,20 +26,21 @@ import { program } from 'commander'
 import { resolve as pathResolve } from 'path'
 import { sync as commandExistsSync } from 'command-exists'
 
+const VERSION = '1.6.1'
+
 const getInfo = options => {
   const { dev } = options
   const packagePath = pathResolve(process.cwd(), 'package.json')
   const packageContents = readFileSync(packagePath, 'utf8')
   const packageIndent = detectIndent(packageContents)
   const packageJSON = JSON.parse(packageContents)
-  const { dependencies = {}, devDependencies = {}, version } = packageJSON
+  const { dependencies = {}, devDependencies = {} } = packageJSON
   return {
     deps: { dependencies, devDependencies },
     packageIndent,
     packageJSON,
     packagePath,
-    pckgs: dev ? Object.keys(devDependencies) : [...Object.keys(dependencies), ...Object.keys(devDependencies)],
-    version
+    pckgs: dev ? Object.keys(devDependencies) : [...Object.keys(dependencies), ...Object.keys(devDependencies)]
   }
 }
 
@@ -64,8 +65,8 @@ const queryVersions = async ({ options, pckgs }) => {
 
 const run = async options => {
   try {
-    const { deps, packageIndent, packageJSON, packagePath, pckgs, version } = getInfo(options)
-    console.log(`${chalk.green(`upgradeps v${version}`)} ${chalk.gray(`${figures.line} run with -h to output usage information`)}`)
+    console.log(`${chalk.green(`upgradeps v${VERSION}`)} ${chalk.gray(`${figures.line} run with -h to output usage information`)}`)
+    const { deps, packageIndent, packageJSON, packagePath, pckgs } = getInfo(options)
     const versions = await queryVersions({ options, pckgs })
     await upgrade({ deps, options, packageIndent, packageJSON, packagePath, versions })
   } catch (error) {
