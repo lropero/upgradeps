@@ -26,31 +26,44 @@ import { program } from 'commander'
 import { resolve as pathResolve } from 'path'
 import { sync as commandExistsSync } from 'command-exists'
 
-const VERSION = '1.6.1'
+const VERSION = '1.6.2'
 
-const getInfo = options => {
-  const { dev } = options
+const getInfo = () => {
   const packagePath = pathResolve(process.cwd(), 'package.json')
   const packageContents = readFileSync(packagePath, 'utf8')
   const packageIndent = detectIndent(packageContents)
   const packageJSON = JSON.parse(packageContents)
   const { dependencies = {}, devDependencies = {} } = packageJSON
   return {
-    deps: { dependencies, devDependencies },
+    currentDependencies: { dependencies, devDependencies },
     packageIndent,
     packageJSON,
-    packagePath,
-    pckgs: dev ? Object.keys(devDependencies) : [...Object.keys(dependencies), ...Object.keys(devDependencies)]
+    packagePath
   }
 }
 
-const queryVersions = async ({ options, pckgs }) => {
-  const { dev, registry } = options
+const queryVersions = async ({ currentDependencies, options }) => {
+  const { dev, patch, registry } = options
   console.log(chalk.blue(`querying versions${dev ? ' (devDependencies only)' : ''}`))
+  const deps = dev ? currentDependencies.devDependencies : { ...currentDependencies.dependencies, ...currentDependencies.devDependencies }
   const responses = await Promise.all(
-    pckgs.map(async pckg => {
+    Object.keys(deps).map(async pckg => {
       try {
-        const { version = false } = registry.length ? await pacote.manifest(pckg, { registry }) : await pacote.manifest(pckg)
+        let version = false
+        if (patch) {
+          const packument = await pacote.packument(pckg)
+          const current = deps[pckg].replace(/[\^~]/, '').trim()
+          const versions = Object.keys(packument.versions).filter(version => {
+            const differenceType = semverDiff(current, version)
+            return differenceType && differenceType.slice(-5) !== 'major'
+          })
+          if (versions.length) {
+            version = versions[versions.length - 1]
+          }
+        } else {
+          const manifest = registry.length ? await pacote.manifest(pckg, { registry }) : await pacote.manifest(pckg)
+          version = manifest.version
+        }
         return { [pckg]: version }
       } catch (error) {
         if (error.statusCode === 404) {
@@ -66,9 +79,9 @@ const queryVersions = async ({ options, pckgs }) => {
 const run = async options => {
   try {
     console.log(`${chalk.green(`upgradeps v${VERSION}`)} ${chalk.gray(`${figures.line} run with -h to output usage information`)}`)
-    const { deps, packageIndent, packageJSON, packagePath, pckgs } = getInfo(options)
-    const versions = await queryVersions({ options, pckgs })
-    await upgrade({ deps, options, packageIndent, packageJSON, packagePath, versions })
+    const { currentDependencies, packageIndent, packageJSON, packagePath } = getInfo()
+    const versions = await queryVersions({ currentDependencies, options })
+    await upgrade({ currentDependencies, options, packageIndent, packageJSON, packagePath, versions })
   } catch (error) {
     console.error(`${chalk.red(figures.cross)} ${error.toString()}`)
     process.exit(0)
@@ -96,24 +109,24 @@ const syncModules = options => {
   return false
 }
 
-const upgrade = async ({ deps, options, packageIndent, packageJSON, packagePath, versions }) => {
-  const { patch, query, skip } = options
+const upgrade = async ({ currentDependencies, options, packageIndent, packageJSON, packagePath, versions }) => {
+  const { query, skip } = options
   const differenceTypes = ['build', 'major', 'minor', 'patch', 'premajor', 'preminor', 'prepatch', 'prerelease']
   const found = Object.keys(versions)
   let hasUpdates = false
-  for (const group of Object.keys(deps)) {
-    for (const pckg of Object.keys(deps[group])) {
+  for (const group of Object.keys(currentDependencies)) {
+    for (const pckg of Object.keys(currentDependencies[group])) {
       if (found.includes(pckg)) {
-        const current = deps[group][pckg].replace(/[\^~]/, '').trim()
+        const current = currentDependencies[group][pckg].replace(/[\^~]/, '').trim()
         const latest = versions[pckg]
         const differenceType = semverDiff(current, latest)
         if (differenceTypes.includes(differenceType)) {
-          const skips = skip.includes(pckg) || (patch && differenceTypes.filter(type => type.slice(-5) === 'major').includes(differenceType))
+          const skips = skip.includes(pckg)
           if (!skips) {
-            deps[group][pckg] = `^${latest}`
+            currentDependencies[group][pckg] = `^${latest}`
             hasUpdates = true
           }
-          console.log(`${chalk.cyan(pckg)} ${query || skips ? chalk.yellow(figures.cross) : chalk.green(figures.tick)} ${current} ${chalk.yellow(figures.arrowRight)} ${latest} ${chalk.magenta(differenceType)}`)
+          console.log(`${chalk.cyan(pckg)} ${query || skips ? chalk.yellow(figures.cross) : chalk.green(figures.tick)} ${current} ${chalk.yellow(figures.arrowRight)} ${latest} ${chalk[differenceType.slice(-5) === 'major' ? 'red' : 'magenta'](differenceType)}`)
         }
       }
     }
@@ -122,7 +135,7 @@ const upgrade = async ({ deps, options, packageIndent, packageJSON, packagePath,
     if (query) {
       console.log(chalk.yellow('package.json not upgraded, run without -q option to upgrade'))
     } else {
-      await writePackage({ deps, packageIndent, packageJSON, packagePath })
+      await writePackage({ currentDependencies, packageIndent, packageJSON, packagePath })
       const synced = await syncModules(options)
       console.log(chalk.blue(`${synced ? 'dependencies' : 'package.json'} upgraded`))
     }
@@ -131,12 +144,12 @@ const upgrade = async ({ deps, options, packageIndent, packageJSON, packagePath,
   }
 }
 
-const writePackage = ({ deps, packageIndent, packageJSON, packagePath }) => {
+const writePackage = ({ currentDependencies, packageIndent, packageJSON, packagePath }) => {
   if (packageJSON.dependencies) {
-    packageJSON.dependencies = deps.dependencies
+    packageJSON.dependencies = currentDependencies.dependencies
   }
   if (packageJSON.devDependencies) {
-    packageJSON.devDependencies = deps.devDependencies
+    packageJSON.devDependencies = currentDependencies.devDependencies
   }
   const indent = packageIndent.type === 'tab' ? '\t' : packageIndent.amount
   writeFileSync(packagePath, JSON.stringify(packageJSON, null, indent) + '\n', 'utf8')
