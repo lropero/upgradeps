@@ -18,6 +18,7 @@
 import chalk from 'chalk'
 import detectIndent from 'detect-indent'
 import figures from 'figures'
+import latestSemver from 'latest-semver'
 import pacote from 'pacote'
 import semverDiff from 'semver-diff'
 import { execSync } from 'child_process'
@@ -26,7 +27,7 @@ import { program } from 'commander'
 import { resolve as pathResolve } from 'path'
 import { sync as commandExistsSync } from 'command-exists'
 
-const VERSION = '1.6.2'
+const VERSION = '1.6.3'
 
 const getInfo = () => {
   const packagePath = pathResolve(process.cwd(), 'package.json')
@@ -55,10 +56,10 @@ const queryVersions = async ({ currentDependencies, options }) => {
           const current = deps[pckg].replace(/[\^~]/, '').trim()
           const versions = Object.keys(packument.versions).filter(version => {
             const differenceType = semverDiff(current, version)
-            return differenceType && differenceType.slice(-5) !== 'major'
+            return differenceType && !differenceType.startsWith('pre') && !differenceType.endsWith('major')
           })
           if (versions.length) {
-            version = versions[versions.length - 1]
+            version = latestSemver(versions)
           }
         } else {
           const manifest = registry.length ? await pacote.manifest(pckg, { registry }) : await pacote.manifest(pckg)
@@ -111,7 +112,7 @@ const syncModules = options => {
 
 const upgrade = async ({ currentDependencies, options, packageIndent, packageJSON, packagePath, versions }) => {
   const { query, skip } = options
-  const differenceTypes = ['build', 'major', 'minor', 'patch', 'premajor', 'preminor', 'prepatch', 'prerelease']
+  const differenceTypes = ['build', 'major', 'minor', 'patch']
   const found = Object.keys(versions)
   let hasUpdates = false
   for (const group of Object.keys(currentDependencies)) {
