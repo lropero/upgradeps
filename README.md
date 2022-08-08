@@ -1,10 +1,10 @@
 # upgradeps &middot; [![npm version](https://badge.fury.io/js/upgradeps.svg)](https://www.npmjs.com/package/upgradeps)&nbsp;[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 
-Blazingly fast command-line utility to **upgra**de all **dep**endencie**s** in package.json to latest version, potentially updating packages across major versions.
+Blazingly fast command-line utility to audit and **upgra**de all **dep**endencie**s** in package.json, potentially updating packages across major versions.
 
 ### Installation and usage
 
-Installation not required, simply run in project's root anytime you'd like to update dependencies:
+Installation not required, simply run in project's root anytime you'd like to audit package.json:
 
 ```sh
 npx upgradeps
@@ -12,44 +12,44 @@ npx upgradeps
 
 ### Options
 
-##### `-d` / `--dev`
+##### `-g` / `--groups`
 
-Upgrade devDependencies only
+Groups to process (defaults to all)
 
 ```sh
-npx upgradeps -d
+npx upgradeps -g devDependecies,peerDependencies
 ```
 
-##### `-m` / `--modules`
+##### `-m` / `--minor`
 
-Sync node_modules if updates
+Process only minor/patch updates when available
 
 ```sh
 npx upgradeps -m
 ```
 
-##### `-p` / `--patch`
-
-Skip major version upgrades
-
-```sh
-npx upgradeps -p
-```
-
-##### `-q` / `--query`
-
-Query versions without upgrading (dry run)
-
-```sh
-npx upgradeps -q
-```
-
 ##### `-r` / `--registry`
 
-Set the npm registry to use
+Set npm registry to use
 
 ```sh
 npx upgradeps -r https://registry.npmjs.org/
+```
+
+##### `-u` / `--upgrade`
+
+Upgrade package.json
+
+```sh
+npx upgradeps -u
+```
+
+##### `-f` / `--fixed`
+
+No ^carets
+
+```sh
+npx upgradeps -u -f
 ```
 
 ##### `-s` / `--skip`
@@ -57,7 +57,7 @@ npx upgradeps -r https://registry.npmjs.org/
 Skip packages
 
 ```sh
-npx upgradeps -s react,react-dom
+npx upgradeps -u -s react,react-dom
 ```
 
 ##### `-y` / `--yarn`
@@ -65,5 +65,5 @@ npx upgradeps -s react,react-dom
 Use yarn instead of npm
 
 ```sh
-npx upgradeps -y
+npx upgradeps -u -y
 ```
