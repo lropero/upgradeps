@@ -29,7 +29,7 @@ import { program } from 'commander'
 import { resolve as pathResolve } from 'path'
 import { sync as commandExistsSync } from 'command-exists'
 
-const VERSION = '2.0.1'
+const VERSION = '2.0.2'
 TimeAgo.addDefaultLocale(en)
 
 const getInfo = () => {
@@ -59,13 +59,13 @@ const print = ({ options, versions }) => {
   }
   const getDependencies = dependencies => {
     return dependencies
-      ? `${chalk.cyan(`${dependencies.amount} dependenc${dependencies.amount > 1 ? 'ies' : 'y'}`)}${
+      ? ` ${chalk.cyan(`${dependencies.amount} dependenc${dependencies.amount > 1 ? 'ies' : 'y'}`)}${
           dependencies.audit
             ? ` ${Object.keys(dependencies.audit)
                 .map(differenceType => getDifferenceType({ amount: dependencies.audit[differenceType], differenceType }))
                 .join(chalk.cyan(', '))}`
             : ''
-        } `
+        }`
       : ''
   }
   const getDetails = ({ currentVersion, differenceType, version }) => {
@@ -80,9 +80,9 @@ const print = ({ options, versions }) => {
   }
   const timeAgo = new TimeAgo()
   Object.keys(versions).map(pckg => {
-    const { currentVersion, dependencies, differenceType = 'latest', latest, modified } = versions[pckg]
-    const ago = `modified ${timeAgo.format(new Date(modified))}`
-    console.log(`${getFigure(differenceType)} ${chalk.cyan(pckg)} ${getDetails({ currentVersion, differenceType, version: latest })}${!options.minor ? ` ${getDependencies(dependencies)}${chalk[ago.includes('year') ? 'red' : 'gray'](ago)}` : ''}`)
+    const { currentVersion, dependencies, differenceType = 'latest', latest, time } = versions[pckg]
+    const ago = !options.minor && time ? ` last publish ${timeAgo.format(new Date(time))}` : ''
+    console.log(`${getFigure(differenceType)} ${chalk.cyan(pckg)} ${getDetails({ currentVersion, differenceType, version: latest })}${ago.length > 0 ? `${getDependencies(dependencies)}${chalk[ago.includes('year') ? 'red' : 'gray'](ago)}` : ''}`)
   })
 }
 
@@ -98,8 +98,8 @@ const queryVersions = async ({ current, options }) => {
           .replace('.x', '.0')
           .replace(/[\^~]/, '')
           .trim()
-        const packument = options.registry.length ? await pacote.packument(pckg, { registry: options.registry }) : await pacote.packument(pckg)
-        const innerDependencies = (packument.versions[currentVersion] || packument.versions[packument['dist-tags'].latest]).dependencies
+        const packument = options.registry.length ? await pacote.packument(pckg, { fullMetadata: true, registry: options.registry }) : await pacote.packument(pckg, { fullMetadata: true })
+        const innerDependencies = packument.versions[currentVersion]?.dependencies
         if (innerDependencies) {
           const counter = { build: 0, major: 0, minor: 0, patch: 0, premajor: 0, preminor: 0, prepatch: 0, prerelease: 0 }
           const keys = Object.keys(innerDependencies)
@@ -137,7 +137,7 @@ const queryVersions = async ({ current, options }) => {
             ...details,
             ...(differenceType && { differenceType }),
             latest: packument['dist-tags'].latest,
-            modified: packument.modified
+            time: packument.time[packument['dist-tags'].latest]
           }
           if (options.minor) {
             const patch = latestSemver(
