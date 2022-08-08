@@ -29,7 +29,7 @@ import { program } from 'commander'
 import { resolve as pathResolve } from 'path'
 import { sync as commandExistsSync } from 'command-exists'
 
-const VERSION = '2.0.0'
+const VERSION = '2.0.1'
 TimeAgo.addDefaultLocale(en)
 
 const getInfo = () => {
@@ -106,10 +106,18 @@ const queryVersions = async ({ current, options }) => {
           await Promise.all(
             keys.map(async pckg => {
               const manifest = options.registry.length ? await pacote.manifest(pckg, { registry: options.registry }) : await pacote.manifest(pckg)
-              const differenceType = semverDiff(innerDependencies[pckg].replace(/[\^~]/, '').trim(), manifest.version)
-              if (differenceType) {
-                counter[differenceType]++
-              }
+              try {
+                const differenceType = semverDiff(
+                  innerDependencies[pckg]
+                    .replace('.x', '.0')
+                    .replace(/[\^~]/, '')
+                    .trim(),
+                  manifest.version
+                )
+                if (differenceType) {
+                  counter[differenceType]++
+                }
+              } catch (error) {}
             })
           )
           const audit = Object.keys(counter)
@@ -122,29 +130,33 @@ const queryVersions = async ({ current, options }) => {
             }
           }
         }
-        const differenceType = semverDiff(currentVersion, packument['dist-tags'].latest)
-        details = {
-          currentVersion,
-          ...details,
-          ...(differenceType && { differenceType }),
-          latest: packument['dist-tags'].latest,
-          modified: packument.modified
-        }
-        if (options.minor) {
-          const patch = latestSemver(
-            Object.keys(packument.versions).filter(version => {
-              const differenceType = semverDiff(currentVersion, version)
-              return differenceType && ['minor', 'patch'].includes(differenceType)
-            })
-          )
-          if (patch) {
-            details.differenceType = semverDiff(currentVersion, patch)
-            details.latest = patch
+        try {
+          const differenceType = semverDiff(currentVersion, packument['dist-tags'].latest)
+          details = {
+            currentVersion,
+            ...details,
+            ...(differenceType && { differenceType }),
+            latest: packument['dist-tags'].latest,
+            modified: packument.modified
+          }
+          if (options.minor) {
+            const patch = latestSemver(
+              Object.keys(packument.versions).filter(version => {
+                const differenceType = semverDiff(currentVersion, version)
+                return differenceType && ['minor', 'patch'].includes(differenceType)
+              })
+            )
+            if (patch) {
+              details.differenceType = semverDiff(currentVersion, patch)
+              details.latest = patch
+              return { [pckg]: details }
+            }
+            return { [pckg]: false }
+          } else {
             return { [pckg]: details }
           }
+        } catch (error) {
           return { [pckg]: false }
-        } else {
-          return { [pckg]: details }
         }
       } catch (error) {
         if (error.statusCode === 404) {
