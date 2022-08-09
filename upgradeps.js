@@ -29,7 +29,7 @@ import { program } from 'commander'
 import { resolve as pathResolve } from 'path'
 import { sync as commandExistsSync } from 'command-exists'
 
-const VERSION = '2.0.2'
+const VERSION = '2.0.3'
 TimeAgo.addDefaultLocale(en)
 
 const getInfo = () => {
@@ -63,7 +63,7 @@ const print = ({ options, versions }) => {
           dependencies.audit
             ? ` ${Object.keys(dependencies.audit)
                 .map(differenceType => getDifferenceType({ amount: dependencies.audit[differenceType], differenceType }))
-                .join(chalk.cyan(', '))}`
+                .join(chalk.gray(', '))}`
             : ''
         }`
       : ''
@@ -81,8 +81,10 @@ const print = ({ options, versions }) => {
   const timeAgo = new TimeAgo()
   Object.keys(versions).map(pckg => {
     const { currentVersion, dependencies, differenceType = 'latest', latest, time } = versions[pckg]
-    const ago = !options.minor && time ? ` last publish ${timeAgo.format(new Date(time))}` : ''
-    console.log(`${getFigure(differenceType)} ${chalk.cyan(pckg)} ${getDetails({ currentVersion, differenceType, version: latest })}${ago.length > 0 ? `${getDependencies(dependencies)}${chalk[ago.includes('year') ? 'red' : 'gray'](ago)}` : ''}`)
+    if (differenceType !== 'latest' || options.verbose) {
+      const ago = time ? `last publish ${timeAgo.format(new Date(time))}` : ''
+      console.log(`${getFigure(differenceType)} ${chalk.cyan(pckg)} ${getDetails({ currentVersion, differenceType, version: latest })}${getDependencies(dependencies)}${ago.length > 0 ? ` ${chalk[ago.includes('year') ? 'bgRed' : 'gray'](ago)}` : ''}`)
+    }
   })
 }
 
@@ -233,6 +235,7 @@ program
   .option('-g, --groups <groups>', "groups to process (defaults to all) -> e.g. '-g devDependecies,peerDependencies'")
   .option('-m, --minor', 'process only minor/patch updates when available')
   .option('-r, --registry <registry>', 'set npm registry to use')
+  .option('-v, --verbose', 'prints information for latest dependencies too')
   .option('-u, --upgrade', 'upgrade package.json')
   .option('-f, --fixed', 'no ^carets (used with -u)')
   .option('-s, --skip <packages>', "skip packages (used with -u) -> e.g. '-s react,react-dom'")
@@ -248,5 +251,6 @@ run({
   registry: options.registry || '',
   skip: (options.skip || '').split(','),
   upgrade: !!options.upgrade,
+  verbose: !!options.verbose,
   yarn: !!options.yarn
 })

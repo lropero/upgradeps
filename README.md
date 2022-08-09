@@ -12,7 +12,7 @@ npx upgradeps
 
 ### Options
 
-##### `-g` / `--groups`
+##### `-g` / `--groups <groups>`
 
 Groups to process (defaults to all)
 
@@ -28,12 +28,20 @@ Process only minor/patch updates when available
 npx upgradeps -m
 ```
 
-##### `-r` / `--registry`
+##### `-r` / `--registry <registry>`
 
 Set npm registry to use
 
 ```sh
 npx upgradeps -r https://registry.npmjs.org/
+```
+
+##### `-v` / `--verbose`
+
+Prints information for latest dependencies too
+
+```sh
+npx upgradeps -v
 ```
 
 ##### `-u` / `--upgrade`
@@ -52,7 +60,7 @@ No ^carets
 npx upgradeps -u -f
 ```
 
-##### `-s` / `--skip`
+##### `-s` / `--skip <packages>`
 
 Skip packages
 
