@@ -29,7 +29,7 @@ import { program } from 'commander'
 import { resolve as pathResolve } from 'path'
 import { sync as commandExistsSync } from 'command-exists'
 
-const VERSION = '2.0.3'
+const VERSION = '2.0.4'
 TimeAgo.addDefaultLocale(en)
 
 const getInfo = () => {
@@ -83,7 +83,7 @@ const print = ({ options, versions }) => {
     const { currentVersion, dependencies, differenceType = 'latest', latest, time } = versions[pckg]
     if (differenceType !== 'latest' || options.verbose) {
       const ago = time ? `last publish ${timeAgo.format(new Date(time))}` : ''
-      console.log(`${getFigure(differenceType)} ${chalk.cyan(pckg)} ${getDetails({ currentVersion, differenceType, version: latest })}${getDependencies(dependencies)}${ago.length > 0 ? ` ${chalk[ago.includes('year') ? 'bgRed' : 'gray'](ago)}` : ''}`)
+      console.log(`${getFigure(differenceType)} ${chalk.cyan(pckg)} ${getDetails({ currentVersion, differenceType, version: latest })}${getDependencies(dependencies)}${ago.length > 0 ? ` ${chalk[ago.includes('years') ? 'bgRed' : ago.includes('year') ? 'bgYellow' : 'gray'](ago)}` : ''}`)
     }
   })
 }
@@ -102,9 +102,9 @@ const queryVersions = async ({ current, options }) => {
           .trim()
         const packument = options.registry.length ? await pacote.packument(pckg, { fullMetadata: true, registry: options.registry }) : await pacote.packument(pckg, { fullMetadata: true })
         const innerDependencies = packument.versions[currentVersion]?.dependencies
-        if (innerDependencies) {
+        const keys = Object.keys(innerDependencies || {})
+        if (keys.length > 0) {
           const counter = { build: 0, major: 0, minor: 0, patch: 0, premajor: 0, preminor: 0, prepatch: 0, prerelease: 0 }
-          const keys = Object.keys(innerDependencies)
           await Promise.all(
             keys.map(async pckg => {
               const manifest = options.registry.length ? await pacote.manifest(pckg, { registry: options.registry }) : await pacote.manifest(pckg)
@@ -232,14 +232,15 @@ const writePackage = ({ info, options, upgraded }) => {
 }
 
 program
+  .version(VERSION)
   .option('-g, --groups <groups>', "groups to process (defaults to all) -> e.g. '-g devDependecies,peerDependencies'")
   .option('-m, --minor', 'process only minor/patch updates when available')
   .option('-r, --registry <registry>', 'set npm registry to use')
   .option('-v, --verbose', 'prints information for latest dependencies too')
   .option('-u, --upgrade', 'upgrade package.json')
-  .option('-f, --fixed', 'no ^carets (used with -u)')
-  .option('-s, --skip <packages>', "skip packages (used with -u) -> e.g. '-s react,react-dom'")
-  .option('-y, --yarn', 'use yarn instead of npm (used with -u)')
+  .option('-f, --fixed', 'no ^carets when upgrading (used with -u)')
+  .option('-s, --skip <packages>', "skip packages when upgrading (used with -u) -> e.g. '-s react,react-dom'")
+  .option('-y, --yarn', 'use yarn instead of npm when upgrading (used with -u)')
   .parse(process.argv)
 
 const options = program.opts()

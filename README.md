@@ -1,6 +1,6 @@
 # upgradeps &middot; [![npm version](https://badge.fury.io/js/upgradeps.svg)](https://www.npmjs.com/package/upgradeps)&nbsp;[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 
-Blazingly fast command-line utility to audit and **upgra**de all **dep**endencie**s** in package.json, potentially updating packages across major versions.
+Audit and **upgra**de all **dep**endencie**s** in package.json, potentially updating packages across major versions.
 
 ![upgradeps](https://user-images.githubusercontent.com/4450399/184115801-ca0fa405-32f3-49b3-9db3-bfb86a804845.png)
 
@@ -56,7 +56,7 @@ npx upgradeps -u
 
 ##### `-f` / `--fixed`
 
-No ^carets
+No ^carets when upgrading
 
 ```sh
 npx upgradeps -u -f
@@ -64,7 +64,7 @@ npx upgradeps -u -f
 
 ##### `-s` / `--skip <packages>`
 
-Skip packages
+Skip packages when upgrading
 
 ```sh
 npx upgradeps -u -s react,react-dom
@@ -72,7 +72,7 @@ npx upgradeps -u -s react,react-dom
 
 ##### `-y` / `--yarn`
 
-Use yarn instead of npm
+Use yarn instead of npm when upgrading
 
 ```sh
 npx upgradeps -u -y

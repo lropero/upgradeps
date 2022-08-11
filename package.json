@@ -1,7 +1,7 @@
 {
   "name": "upgradeps",
-  "version": "2.0.3",
-  "description": "Blazingly fast command-line utility to upgrade all dependencies in package.json to latest version, potentially updating packages across major versions.",
+  "version": "2.0.4",
+  "description": "Audit and upgrade all dependencies in package.json, potentially updating packages across major versions.",
   "dependencies": {
     "chalk": "5.0.1",
     "command-exists": "1.2.9",
