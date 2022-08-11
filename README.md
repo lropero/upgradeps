@@ -2,6 +2,8 @@
 
 Blazingly fast command-line utility to audit and **upgra**de all **dep**endencie**s** in package.json, potentially updating packages across major versions.
 
+![upgradeps](https://user-images.githubusercontent.com/4450399/184115801-ca0fa405-32f3-49b3-9db3-bfb86a804845.png)
+
 ### Installation and usage
 
 Installation not required, simply run in project's root anytime you'd like to audit package.json:
