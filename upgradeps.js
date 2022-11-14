@@ -16,6 +16,7 @@
  */
 
 import chalk from 'chalk'
+import chalkAnimation from 'chalk-animation'
 import detectIndent from 'detect-indent'
 import figures from 'figures'
 import latestSemver from 'latest-semver'
@@ -27,10 +28,49 @@ import { execSync } from 'child_process'
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
 import { program } from 'commander'
 import { resolve as pathResolve } from 'path'
-import { sync as commandExistsSync } from 'command-exists'
 
-const VERSION = '2.0.4'
+const VERSION = '2.0.5'
 TimeAgo.addDefaultLocale(en)
+
+const getColor = differenceType => {
+  switch (differenceType) {
+    case 'latest':
+      return 'green'
+    case 'major':
+      return 'red'
+    case 'minor':
+      return 'yellow'
+    case 'patch':
+      return 'blue'
+    default:
+      return 'magenta'
+  }
+}
+
+const getDependencies = dependencies => {
+  return dependencies
+    ? ` ${chalk.cyan(`${dependencies.amount} dependenc${dependencies.amount > 1 ? 'ies' : 'y'}`)}${
+        dependencies.audit
+          ? ` ${Object.keys(dependencies.audit)
+              .map(differenceType => getDifferenceType({ amount: dependencies.audit[differenceType], differenceType }))
+              .join(chalk.gray(', '))}`
+          : ''
+      }`
+    : ''
+}
+
+const getDetails = ({ currentVersion, differenceType, version }) => {
+  const background = getColor(differenceType)
+  return `${differenceType === 'latest' ? currentVersion : `${chalk[`bg${`${background.charAt(0).toUpperCase()}${background.slice(1)}`}`](currentVersion)} ${chalk.yellow(figures.arrowRight)} ${version}`} ${getDifferenceType({ differenceType })}`
+}
+
+const getDifferenceType = ({ amount = 0, differenceType }) => {
+  return chalk[getColor(differenceType)](`${amount > 0 ? `${amount} ` : ''}${differenceType}`)
+}
+
+const getFigure = differenceType => {
+  return chalk[getColor(differenceType)](figures[differenceType === 'latest' ? 'tick' : 'cross'])
+}
 
 const getInfo = () => {
   const path = pathResolve(process.cwd(), 'package.json')
@@ -42,51 +82,33 @@ const getInfo = () => {
   return { current, indent, json, path }
 }
 
-const print = ({ options, versions }) => {
-  const getColor = differenceType => {
-    switch (differenceType) {
-      case 'latest':
-        return 'green'
-      case 'major':
-        return 'red'
-      case 'minor':
-        return 'yellow'
-      case 'patch':
-        return 'blue'
-      default:
-        return 'magenta'
-    }
-  }
-  const getDependencies = dependencies => {
-    return dependencies
-      ? ` ${chalk.cyan(`${dependencies.amount} dependenc${dependencies.amount > 1 ? 'ies' : 'y'}`)}${
-          dependencies.audit
-            ? ` ${Object.keys(dependencies.audit)
-                .map(differenceType => getDifferenceType({ amount: dependencies.audit[differenceType], differenceType }))
-                .join(chalk.gray(', '))}`
-            : ''
-        }`
-      : ''
-  }
-  const getDetails = ({ currentVersion, differenceType, version }) => {
-    const background = getColor(differenceType)
-    return `${differenceType === 'latest' ? currentVersion : `${chalk[`bg${`${background.charAt(0).toUpperCase()}${background.slice(1)}`}`](currentVersion)} ${chalk.yellow(figures.arrowRight)} ${version}`} ${getDifferenceType({ differenceType })}`
-  }
-  const getDifferenceType = ({ amount = 0, differenceType }) => {
-    return chalk[getColor(differenceType)](`${amount > 0 ? `${amount} ` : ''}${differenceType}`)
-  }
-  const getFigure = differenceType => {
-    return chalk[getColor(differenceType)](figures[differenceType === 'latest' ? 'tick' : 'cross'])
-  }
-  const timeAgo = new TimeAgo()
-  Object.keys(versions).map(pckg => {
-    const { currentVersion, dependencies, differenceType = 'latest', latest, time } = versions[pckg]
-    if (differenceType !== 'latest' || options.verbose) {
-      const ago = time ? `last publish ${timeAgo.format(new Date(time))}` : ''
-      console.log(`${getFigure(differenceType)} ${chalk.cyan(pckg)} ${getDetails({ currentVersion, differenceType, version: latest })}${getDependencies(dependencies)}${ago.length > 0 ? ` ${chalk[ago.includes('years') ? 'bgRed' : ago.includes('year') ? 'bgYellow' : 'gray'](ago)}` : ''}`)
-    }
+const print = ({ options, versions }) =>
+  new Promise(resolve => {
+    const stats = { amount: 0 }
+    const timeAgo = new TimeAgo()
+    Object.keys(versions).map(pckg => {
+      const { currentVersion, dependencies, differenceType = 'latest', latest, time } = versions[pckg]
+      if (!stats.audit) {
+        stats.audit = {}
+      }
+      if (differenceType !== 'latest' || options.verbose) {
+        if (!stats.audit[differenceType]) {
+          stats.audit[differenceType] = 0
+        }
+        stats.amount++
+        stats.audit[differenceType]++
+        const ago = time ? `last publish ${timeAgo.format(new Date(time))}` : ''
+        const color = ago.includes('2 years') ? 'bgMagenta' : ago.includes('years') ? 'bgRed' : ago.includes('year') ? 'bgYellow' : 'gray'
+        console.log(`${getFigure(differenceType)} ${chalk.cyan(pckg)} ${getDetails({ currentVersion, differenceType, version: latest })}${getDependencies(dependencies)}${ago.length > 0 ? ` ${chalk[color](ago)}` : ''}`)
+      }
+    })
+    const emojis = ['ヽ(´▽`)ノ', 'ԅ(≖‿≖ԅ)', 'ᕕ( ᐛ )ᕗ']
+    const animation = chalkAnimation[stats.amount === 0 ? 'rainbow' : 'neon'](stats.amount === 0 ? `no updates ${emojis[Math.floor(Math.random() * emojis.length)]}` : ` ${getDependencies(stats)}`, 1.2)
+    setTimeout(() => {
+      animation.stop()
+      return resolve()
+    }, 1500)
   })
-}
 
 const queryVersions = async ({ current, options }) => {
   const dependencies = Object.keys(current)
@@ -100,7 +122,7 @@ const queryVersions = async ({ current, options }) => {
           .replace('.x', '.0')
           .replace(/[\^~]/, '')
           .trim()
-        const packument = options.registry.length ? await pacote.packument(pckg, { fullMetadata: true, registry: options.registry }) : await pacote.packument(pckg, { fullMetadata: true })
+        const packument = await pacote.packument(pckg, { fullMetadata: true, ...(options.registry.length > 0 && { registry: options.registry }) })
         const innerDependencies = packument.versions[currentVersion]?.dependencies
         const keys = Object.keys(innerDependencies || {})
         if (keys.length > 0) {
@@ -141,6 +163,7 @@ const queryVersions = async ({ current, options }) => {
             latest: packument['dist-tags'].latest,
             time: packument.time[packument['dist-tags'].latest]
           }
+          let rtrn = { [pckg]: false }
           if (options.minor) {
             const patch = latestSemver(
               Object.keys(packument.versions).filter(version => {
@@ -151,12 +174,14 @@ const queryVersions = async ({ current, options }) => {
             if (patch) {
               details.differenceType = semverDiff(currentVersion, patch)
               details.latest = patch
-              return { [pckg]: details }
+              rtrn = { [pckg]: details }
+            } else if (!differenceType && options.verbose) {
+              rtrn = { [pckg]: details }
             }
-            return { [pckg]: false }
           } else {
-            return { [pckg]: details }
+            rtrn = { [pckg]: details }
           }
+          return rtrn
         } catch (error) {
           return { [pckg]: false }
         }
@@ -173,28 +198,31 @@ const queryVersions = async ({ current, options }) => {
 
 const run = async options => {
   try {
+    if ((options.fixed || options.skip.length > 0 || options.yarn) && !options.upgrade) {
+      const opts = [options.fixed && '-f', options.skip.length > 0 && '-s', options.yarn && '-y'].filter(option => option)
+      throw new Error(`Missing -u option when using ${opts.join(' and ')} option${opts.length > 1 ? 's' : ''}`)
+    }
     const info = getInfo()
     const { current } = info
     console.log(`${chalk.green(`upgradeps v${VERSION}`)} ${chalk.gray(`${figures.line} run with -h to output usage information`)}`)
     const versions = await queryVersions({ current, options })
-    print({ options, versions })
+    await print({ options, versions })
     if (options.upgrade) {
       upgrade({ info, options, versions })
     }
   } catch (error) {
     console.error(`${chalk.red(figures.cross)} ${error.toString()}`)
-    process.exit(0)
+    process.exit()
   }
 }
 
 const syncModules = options => {
-  const useYarn = options.yarn && commandExistsSync('yarn')
-  const lock = useYarn ? 'yarn.lock' : 'package-lock.json'
+  const lock = options.yarn ? 'yarn.lock' : 'package-lock.json'
   if (existsSync(pathResolve(process.cwd(), lock))) {
     unlinkSync(lock)
   }
   if (existsSync(pathResolve(process.cwd(), 'node_modules'))) {
-    execSync(`${useYarn ? 'yarn' : 'npm install'}${options.registry.length ? ` --registry ${options.registry}` : ''}`, { stdio: [] })
+    execSync(`${options.yarn ? 'yarn' : 'npm install'}${options.registry.length ? ` --registry ${options.registry}` : ''}`, { stdio: [] })
   }
 }
 
@@ -207,14 +235,17 @@ const upgrade = ({ info, options, versions }) => {
       for (const pckg of Object.keys(upgraded[group])) {
         if (!options.skip.includes(pckg)) {
           if (versions[pckg]?.differenceType) {
-            upgraded[group][pckg] = `${options.fixed ? '' : '^'}${versions[pckg].latest}`
+            upgraded[group][pckg] = `^${versions[pckg].latest}`
             hasChanges = true
+          }
+          if (options.fixed) {
+            upgraded[group][pckg] = upgraded[group][pckg].replace('^', '')
           }
         }
       }
     })
+  writePackage({ info, options, upgraded })
   if (hasChanges) {
-    writePackage({ info, options, upgraded })
     syncModules(options)
   }
 }
@@ -233,14 +264,14 @@ const writePackage = ({ info, options, upgraded }) => {
 
 program
   .version(VERSION)
-  .option('-g, --groups <groups>', "groups to process (defaults to all) -> e.g. '-g devDependecies,peerDependencies'")
-  .option('-m, --minor', 'process only minor/patch updates when available')
-  .option('-r, --registry <registry>', 'set npm registry to use')
-  .option('-v, --verbose', 'prints information for latest dependencies too')
+  .option('-v, --verbose', 'print information for latest dependencies too')
+  .option('-g, --groups <groups>', 'specify groups to process (defaults to all) -> e.g. "-g dependencies,devDependecies"')
+  .option('-m, --minor', 'process only minor and patch updates when available')
+  .option('-r, --registry <registry>', 'set registry to use')
   .option('-u, --upgrade', 'upgrade package.json')
-  .option('-f, --fixed', 'no ^carets when upgrading (used with -u)')
-  .option('-s, --skip <packages>', "skip packages when upgrading (used with -u) -> e.g. '-s react,react-dom'")
-  .option('-y, --yarn', 'use yarn instead of npm when upgrading (used with -u)')
+  .option('-f, --fixed', 'remove ^carets (used with -u)')
+  .option('-s, --skip <packages>', 'skip packages -> e.g. "-s react,react-dom" (used with -u)')
+  .option('-y, --yarn', 'use yarn instead of npm (used with -u)')
   .parse(process.argv)
 
 const options = program.opts()
@@ -250,7 +281,7 @@ run({
   groups: (options.groups || 'bundledDependencies,dependencies,devDependencies,optionalDependencies,peerDependencies').split(',').filter(group => ['bundledDependencies', 'dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'].includes(group)),
   minor: !!options.minor,
   registry: options.registry || '',
-  skip: (options.skip || '').split(','),
+  skip: (options.skip || '').split(',').filter(skip => skip.length > 0),
   upgrade: !!options.upgrade,
   verbose: !!options.verbose,
   yarn: !!options.yarn

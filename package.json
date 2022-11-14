@@ -1,40 +1,41 @@
 {
   "name": "upgradeps",
-  "version": "2.0.4",
-  "description": "Audit and upgrade all dependencies in package.json, potentially updating packages across major versions.",
-  "dependencies": {
-    "chalk": "5.0.1",
-    "command-exists": "1.2.9",
-    "commander": "9.4.0",
-    "detect-indent": "7.0.0",
-    "figures": "5.0.0",
-    "javascript-time-ago": "2.5.7",
-    "latest-semver": "4.0.0",
-    "pacote": "13.6.1",
-    "semver-diff": "4.0.0"
-  },
-  "author": "Luciano Ropero <lropero@gmail.com>",
-  "bin": {
-    "upgradeps": "./upgradeps.js"
-  },
-  "bugs": {
-    "url": "https://github.com/lropero/upgradeps/issues"
-  },
-  "exports": "./upgradeps.js",
-  "homepage": "https://github.com/lropero/upgradeps#readme",
+  "version": "2.0.5",
+  "description": "Audit and upgrade all dependencies in package.json.",
   "keywords": [
+    "audit",
     "dependencies",
-    "node_modules",
+    "modules",
     "packages",
     "semver",
     "update",
-    "upgrade",
-    "version"
+    "upgrade"
   ],
-  "license": "ISC",
+  "homepage": "https://github.com/lropero/upgradeps#readme",
+  "bugs": "https://github.com/lropero/upgradeps/issues",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/lropero/upgradeps.git"
   },
-  "type": "module"
+  "license": "ISC",
+  "author": "Luciano Ropero <lropero@gmail.com>",
+  "type": "module",
+  "exports": "./upgradeps.js",
+  "bin": {
+    "upgradeps": "./upgradeps.js"
+  },
+  "dependencies": {
+    "chalk": "5.1.2",
+    "chalk-animation": "2.0.3",
+    "commander": "9.4.1",
+    "detect-indent": "7.0.1",
+    "figures": "5.0.0",
+    "javascript-time-ago": "2.5.9",
+    "latest-semver": "4.0.0",
+    "pacote": "15.0.6",
+    "semver-diff": "4.0.0"
+  },
+  "engines": {
+    "node": ">=14"
+  }
 }
