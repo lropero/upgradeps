@@ -1,6 +1,6 @@
 {
   "name": "upgradeps",
-  "version": "2.0.5",
+  "version": "2.0.6",
   "description": "Audit and upgrade all dependencies in package.json.",
   "keywords": [
     "audit",
@@ -24,15 +24,19 @@
   "bin": {
     "upgradeps": "./upgradeps.js"
   },
+  "scripts": {
+    "lint": "npx prettier@latest --write . && npx standard@latest --fix",
+    "sort": "npx sort-package-json@latest"
+  },
   "dependencies": {
-    "chalk": "5.1.2",
+    "chalk": "5.3.0",
     "chalk-animation": "2.0.3",
-    "commander": "9.4.1",
+    "commander": "11.0.0",
     "detect-indent": "7.0.1",
     "figures": "5.0.0",
     "javascript-time-ago": "2.5.9",
     "latest-semver": "4.0.0",
-    "pacote": "15.0.6",
+    "pacote": "15.2.0",
     "semver-diff": "4.0.0"
   },
   "engines": {

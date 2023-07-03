@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Copyright (c) 2020, Luciano Ropero <lropero@gmail.com>
+ * Copyright (c) 2023, Luciano Ropero <lropero@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -29,7 +29,7 @@ import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
 import { program } from 'commander'
 import { resolve as pathResolve } from 'path'
 
-const VERSION = '2.0.5'
+const VERSION = '2.0.6'
 TimeAgo.addDefaultLocale(en)
 
 const getColor = differenceType => {
@@ -86,7 +86,7 @@ const print = ({ options, versions }) =>
   new Promise(resolve => {
     const stats = { amount: 0 }
     const timeAgo = new TimeAgo()
-    Object.keys(versions).map(pckg => {
+    Object.keys(versions).forEach(pckg => {
       const { currentVersion, dependencies, differenceType = 'latest', latest, time } = versions[pckg]
       if (!stats.audit) {
         stats.audit = {}
@@ -118,10 +118,7 @@ const queryVersions = async ({ current, options }) => {
     Object.keys(dependencies).map(async pckg => {
       try {
         let details = {}
-        const currentVersion = dependencies[pckg]
-          .replace('.x', '.0')
-          .replace(/[\^~]/, '')
-          .trim()
+        const currentVersion = dependencies[pckg].replace('.x', '.0').replace(/[\^~]/, '').trim()
         const packument = await pacote.packument(pckg, { fullMetadata: true, ...(options.registry.length > 0 && { registry: options.registry }) })
         const innerDependencies = packument.versions[currentVersion]?.dependencies
         const keys = Object.keys(innerDependencies || {})
@@ -131,13 +128,7 @@ const queryVersions = async ({ current, options }) => {
             keys.map(async pckg => {
               const manifest = options.registry.length ? await pacote.manifest(pckg, { registry: options.registry }) : await pacote.manifest(pckg)
               try {
-                const differenceType = semverDiff(
-                  innerDependencies[pckg]
-                    .replace('.x', '.0')
-                    .replace(/[\^~]/, '')
-                    .trim(),
-                  manifest.version
-                )
+                const differenceType = semverDiff(innerDependencies[pckg].replace('.x', '.0').replace(/[\^~]/, '').trim(), manifest.version)
                 if (differenceType) {
                   counter[differenceType]++
                 }
@@ -196,26 +187,6 @@ const queryVersions = async ({ current, options }) => {
   return responses.reduce((versions, response) => (Object.values(response)[0] ? { ...versions, ...response } : versions), {})
 }
 
-const run = async options => {
-  try {
-    if ((options.fixed || options.skip.length > 0 || options.yarn) && !options.upgrade) {
-      const opts = [options.fixed && '-f', options.skip.length > 0 && '-s', options.yarn && '-y'].filter(option => option)
-      throw new Error(`Missing -u option when using ${opts.join(' and ')} option${opts.length > 1 ? 's' : ''}`)
-    }
-    const info = getInfo()
-    const { current } = info
-    console.log(`${chalk.green(`upgradeps v${VERSION}`)} ${chalk.gray(`${figures.line} run with -h to output usage information`)}`)
-    const versions = await queryVersions({ current, options })
-    await print({ options, versions })
-    if (options.upgrade) {
-      upgrade({ info, options, versions })
-    }
-  } catch (error) {
-    console.error(`${chalk.red(figures.cross)} ${error.toString()}`)
-    process.exit()
-  }
-}
-
 const syncModules = options => {
   const lock = options.yarn ? 'yarn.lock' : 'package-lock.json'
   if (existsSync(pathResolve(process.cwd(), lock))) {
@@ -269,20 +240,36 @@ program
   .option('-m, --minor', 'process only minor and patch updates when available')
   .option('-r, --registry <registry>', 'set registry to use')
   .option('-u, --upgrade', 'upgrade package.json')
-  .option('-f, --fixed', 'remove ^carets (used with -u)')
-  .option('-s, --skip <packages>', 'skip packages -> e.g. "-s react,react-dom" (used with -u)')
-  .option('-y, --yarn', 'use yarn instead of npm (used with -u)')
+  .option('-f, --fixed', 'remove ^carets (use with -u)')
+  .option('-s, --skip <packages>', 'skip packages -> e.g. "-s react,react-dom" (use with -u)')
+  .option('-y, --yarn', 'use yarn instead of npm (use with -u)')
+  .action(async options => {
+    options = {
+      fixed: !!options.fixed,
+      groups: (options.groups || 'bundledDependencies,dependencies,devDependencies,optionalDependencies,peerDependencies').split(',').filter(group => ['bundledDependencies', 'dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'].includes(group)),
+      minor: !!options.minor,
+      registry: options.registry || '',
+      skip: (options.skip || '').split(',').filter(skip => skip.length > 0),
+      upgrade: !!options.upgrade,
+      verbose: !!options.verbose,
+      yarn: !!options.yarn
+    }
+    try {
+      if ((options.fixed || options.skip.length > 0 || options.yarn) && !options.upgrade) {
+        const opts = [options.fixed && '-f', options.skip.length > 0 && '-s', options.yarn && '-y'].filter(option => option)
+        throw new Error(`Missing -u option when using ${opts.join(' and ')} option${opts.length > 1 ? 's' : ''}`)
+      }
+      const info = getInfo()
+      const { current } = info
+      console.log(`${chalk.green(`upgradeps v${VERSION}`)} ${chalk.gray(`${figures.line} run with -h to output usage information`)}`)
+      const versions = await queryVersions({ current, options })
+      await print({ options, versions })
+      if (options.upgrade) {
+        upgrade({ info, options, versions })
+      }
+    } catch (error) {
+      console.log(`${chalk.red(figures.cross)} ${error.toString()}`)
+      process.exit()
+    }
+  })
   .parse(process.argv)
-
-const options = program.opts()
-
-run({
-  fixed: !!options.fixed,
-  groups: (options.groups || 'bundledDependencies,dependencies,devDependencies,optionalDependencies,peerDependencies').split(',').filter(group => ['bundledDependencies', 'dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'].includes(group)),
-  minor: !!options.minor,
-  registry: options.registry || '',
-  skip: (options.skip || '').split(',').filter(skip => skip.length > 0),
-  upgrade: !!options.upgrade,
-  verbose: !!options.verbose,
-  yarn: !!options.yarn
-})

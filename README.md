@@ -52,7 +52,7 @@ npx upgradeps -u
 
 ##### `-f` / `--fixed`
 
-Remove `^`carets (used with -u)
+Remove `^`carets (use with -u)
 
 ```sh
 npx upgradeps -u -f
@@ -60,7 +60,7 @@ npx upgradeps -u -f
 
 ##### `-s` / `--skip <packages>`
 
-Skip packages (used with -u)
+Skip packages (use with -u)
 
 ```sh
 npx upgradeps -u -s react,react-dom
@@ -68,7 +68,7 @@ npx upgradeps -u -s react,react-dom
 
 ##### `-y` / `--yarn`
 
-Use `yarn` instead of `npm` (used with -u)
+Use `yarn` instead of `npm` (use with -u)
 
 ```sh
 npx upgradeps -u -y
