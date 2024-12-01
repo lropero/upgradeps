@@ -29,7 +29,7 @@ import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
 import { program } from 'commander'
 import { resolve as pathResolve } from 'path'
 
-const VERSION = '2.0.6'
+const VERSION = '2.0.7'
 TimeAgo.addDefaultLocale(en)
 
 const getColor = differenceType => {
