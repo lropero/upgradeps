@@ -29,7 +29,7 @@ import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
 import { program } from 'commander'
 import { resolve as pathResolve } from 'path'
 
-const VERSION = '2.0.7'
+const VERSION = '2.0.8'
 TimeAgo.addDefaultLocale(en)
 
 const getColor = differenceType => {
@@ -82,6 +82,15 @@ const getInfo = () => {
   return { current, indent, json, path }
 }
 
+const normalizeSemver = version => {
+  const normalized = version.replace('.x', '.0').replace(/[\^~]/, '').trim()
+  const parts = normalized.split('.')
+  while (parts.length < 3) {
+    parts.push('0')
+  }
+  return parts.slice(0, 3).join('.')
+}
+
 const print = ({ options, versions }) =>
   new Promise(resolve => {
     const stats = { amount: 0 }
@@ -118,21 +127,23 @@ const queryVersions = async ({ current, options }) => {
     Object.keys(dependencies).map(async pckg => {
       try {
         let details = {}
-        const currentVersion = dependencies[pckg].replace('.x', '.0').replace(/[\^~]/, '').trim()
+        const currentVersion = normalizeSemver(dependencies[pckg])
         const packument = await pacote.packument(pckg, { fullMetadata: true, ...(options.registry.length > 0 && { registry: options.registry }) })
-        const innerDependencies = packument.versions[currentVersion]?.dependencies
-        const keys = Object.keys(innerDependencies || {})
+        const innerDependencies = packument.versions[currentVersion]?.dependencies || {}
+        const keys = Object.keys(innerDependencies)
         if (keys.length > 0) {
           const counter = { build: 0, major: 0, minor: 0, patch: 0, premajor: 0, preminor: 0, prepatch: 0, prerelease: 0 }
           await Promise.all(
             keys.map(async pckg => {
               const manifest = options.registry.length ? await pacote.manifest(pckg, { registry: options.registry }) : await pacote.manifest(pckg)
               try {
-                const differenceType = semverDiff(innerDependencies[pckg].replace('.x', '.0').replace(/[\^~]/, '').trim(), manifest.version)
+                const differenceType = semverDiff(normalizeSemver(innerDependencies[pckg]), manifest.version)
                 if (differenceType) {
                   counter[differenceType]++
                 }
-              } catch (error) {}
+              } catch (error) {
+                // Skip packages with invalid semver ranges
+              }
             })
           )
           const audit = Object.keys(counter)
@@ -154,7 +165,7 @@ const queryVersions = async ({ current, options }) => {
             latest: packument['dist-tags'].latest,
             time: packument.time[packument['dist-tags'].latest]
           }
-          let rtrn = { [pckg]: false }
+          let result = { [pckg]: false }
           if (options.minor) {
             const patch = latestSemver(
               Object.keys(packument.versions).filter(version => {
@@ -165,14 +176,14 @@ const queryVersions = async ({ current, options }) => {
             if (patch) {
               details.differenceType = semverDiff(currentVersion, patch)
               details.latest = patch
-              rtrn = { [pckg]: details }
+              result = { [pckg]: details }
             } else if (!differenceType && options.verbose) {
-              rtrn = { [pckg]: details }
+              result = { [pckg]: details }
             }
           } else {
-            rtrn = { [pckg]: details }
+            result = { [pckg]: details }
           }
-          return rtrn
+          return result
         } catch (error) {
           return { [pckg]: false }
         }
@@ -269,7 +280,7 @@ program
       }
     } catch (error) {
       console.log(`${chalk.red(figures.cross)} ${error.toString()}`)
-      process.exit()
+      process.exit(1)
     }
   })
   .parse(process.argv)
