@@ -1,6 +1,6 @@
 {
   "name": "upgradeps",
-  "version": "2.0.8",
+  "version": "2.0.9",
   "description": "Audit and upgrade all dependencies in package.json.",
   "keywords": [
     "audit",
@@ -29,7 +29,7 @@
     "sort": "npx sort-package-json@latest"
   },
   "dependencies": {
-    "chalk": "5.4.1",
+    "chalk": "5.6.0",
     "chalk-animation": "2.0.3",
     "commander": "14.0.0",
     "detect-indent": "7.0.1",

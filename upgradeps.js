@@ -29,7 +29,7 @@ import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
 import { program } from 'commander'
 import { resolve as pathResolve } from 'path'
 
-const VERSION = '2.0.8'
+const VERSION = '2.0.9'
 TimeAgo.addDefaultLocale(en)
 
 const getColor = differenceType => {
@@ -88,7 +88,7 @@ const normalizeSemver = version => {
   while (parts.length < 3) {
     parts.push('0')
   }
-  return parts.slice(0, 3).join('.')
+  return parts.join('.')
 }
 
 const print = ({ options, versions }) =>
@@ -135,8 +135,8 @@ const queryVersions = async ({ current, options }) => {
           const counter = { build: 0, major: 0, minor: 0, patch: 0, premajor: 0, preminor: 0, prepatch: 0, prerelease: 0 }
           await Promise.all(
             keys.map(async pckg => {
-              const manifest = options.registry.length ? await pacote.manifest(pckg, { registry: options.registry }) : await pacote.manifest(pckg)
               try {
+                const manifest = options.registry.length ? await pacote.manifest(pckg, { registry: options.registry }) : await pacote.manifest(pckg)
                 const differenceType = semverDiff(normalizeSemver(innerDependencies[pckg]), manifest.version)
                 if (differenceType) {
                   counter[differenceType]++
