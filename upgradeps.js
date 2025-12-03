@@ -24,12 +24,12 @@ import pacote from 'pacote'
 import semverDiff from 'semver-diff'
 import TimeAgo from 'javascript-time-ago'
 import en from 'javascript-time-ago/locale/en'
+import { basename as pathBasename, resolve as pathResolve } from 'path'
 import { execSync } from 'child_process'
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
 import { program } from 'commander'
-import { resolve as pathResolve } from 'path'
 
-const VERSION = '2.0.9'
+const VERSION = '2.1.0'
 TimeAgo.addDefaultLocale(en)
 
 const getColor = differenceType => {
@@ -45,6 +45,20 @@ const getColor = differenceType => {
     default:
       return 'magenta'
   }
+}
+
+const getConfig = () => {
+  const configPath = pathResolve(process.cwd(), 'upgradeps.json')
+  if (existsSync(configPath)) {
+    try {
+      const configContents = readFileSync(configPath, 'utf8')
+      return JSON.parse(configContents)
+    } catch (error) {
+      console.log(` ${chalk.yellow(figures.warning)} ${chalk.blue('error parsing upgradeps.json, using defaults')}`)
+      return {}
+    }
+  }
+  return {}
 }
 
 const getDependencies = dependencies => {
@@ -72,7 +86,7 @@ const getFigure = differenceType => {
   return chalk[getColor(differenceType)](figures[differenceType === 'latest' ? 'tick' : 'cross'])
 }
 
-const getInfo = () => {
+const getPackageInfo = () => {
   const path = pathResolve(process.cwd(), 'package.json')
   const contents = readFileSync(path, 'utf8')
   const indent = detectIndent(contents)
@@ -108,11 +122,11 @@ const print = ({ options, versions }) =>
         stats.audit[differenceType]++
         const ago = time ? `last publish ${timeAgo.format(new Date(time))}` : ''
         const color = ago.includes('2 years') ? 'bgMagenta' : ago.includes('years') ? 'bgRed' : ago.includes('year') ? 'bgYellow' : 'gray'
-        console.log(`${getFigure(differenceType)} ${chalk.cyan(pckg)} ${getDetails({ currentVersion, differenceType, version: latest })}${getDependencies(dependencies)}${ago.length > 0 ? ` ${chalk[color](ago)}` : ''}`)
+        console.log(`  ${getFigure(differenceType)} ${chalk.cyan(pckg)} ${getDetails({ currentVersion, differenceType, version: latest })}${getDependencies(dependencies)}${ago.length > 0 ? ` ${chalk[color](ago)}` : ''}`)
       }
     })
     const emojis = ['ヽ(´▽`)ノ', 'ԅ(≖‿≖ԅ)', 'ᕕ( ᐛ )ᕗ']
-    const animation = chalkAnimation[stats.amount === 0 ? 'rainbow' : 'neon'](stats.amount === 0 ? `no updates ${emojis[Math.floor(Math.random() * emojis.length)]}` : ` ${getDependencies(stats)}`, 1.2)
+    const animation = chalkAnimation[stats.amount === 0 ? 'rainbow' : 'neon'](stats.amount === 0 ? `  ${figures.tick} no updates ${emojis[Math.floor(Math.random() * emojis.length)]}` : ` ${getDependencies(stats)}`, 1.2)
     setTimeout(() => {
       animation.stop()
       return resolve()
@@ -246,33 +260,33 @@ const writePackage = ({ info, options, upgraded }) => {
 
 program
   .version(VERSION)
-  .option('-v, --verbose', 'print information for latest dependencies too')
-  .option('-g, --groups <groups>', 'specify groups to process (defaults to all) -> e.g. "-g dependencies,devDependecies"')
-  .option('-m, --minor', 'process only minor and patch updates when available')
-  .option('-r, --registry <registry>', 'set registry to use')
-  .option('-u, --upgrade', 'upgrade package.json')
-  .option('-f, --fixed', 'remove ^carets (use with -u)')
-  .option('-s, --skip <packages>', 'skip packages -> e.g. "-s react,react-dom" (use with -u)')
+  .option('-f, --fixed', 'remove ^carets when upgrading (use with -u)')
+  .option('-g, --groups <groups>', 'specify dependency groups to process (defaults to all) -> e.g. "-g dependencies,devDependecies"')
+  .option('-m, --minor', 'process only minor and patch updates')
+  .option('-r, --registry <registry>', 'set custom npm registry URL')
+  .option('-s, --skip <packages>', 'packages to skip during upgrade -> e.g. "-s react,react-dom" (use with -u)')
+  .option('-u, --upgrade', 'automatically upgrade package.json')
+  .option('-v, --verbose', 'print information for latest dependencies as well')
   .option('-y, --yarn', 'use yarn instead of npm (use with -u)')
   .action(async options => {
+    console.log(`${chalk.magenta(figures.play)} ${chalk.green(`upgradeps v${VERSION}`)} ${chalk.magenta(`<${pathBasename(process.cwd())}>`)} ${chalk.gray(`${figures.line} run with -h to output usage information`)}`)
+    const config = Object.keys(options).length > 0 ? {} : getConfig()
+    if (Object.keys(config).length > 0) {
+      console.log(` ${chalk.blue(figures.bullet)} ${chalk.blue('using configuration from upgradeps.json')}`)
+    }
     options = {
-      fixed: !!options.fixed,
-      groups: (options.groups || 'bundledDependencies,dependencies,devDependencies,optionalDependencies,peerDependencies').split(',').filter(group => ['bundledDependencies', 'dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'].includes(group)),
-      minor: !!options.minor,
-      registry: options.registry || '',
-      skip: (options.skip || '').split(',').filter(skip => skip.length > 0),
-      upgrade: !!options.upgrade,
-      verbose: !!options.verbose,
-      yarn: !!options.yarn
+      fixed: options.fixed !== undefined ? !!options.fixed : config.fixed !== undefined ? !!config.fixed : false,
+      groups: options.groups ? options.groups.split(',').filter(group => ['bundledDependencies', 'dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'].includes(group)) : config.groups && config.groups.length > 0 ? config.groups.filter(group => ['bundledDependencies', 'dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'].includes(group)) : 'bundledDependencies,dependencies,devDependencies,optionalDependencies,peerDependencies'.split(','),
+      minor: options.minor !== undefined ? !!options.minor : config.minor !== undefined ? !!config.minor : false,
+      registry: options.registry !== undefined ? options.registry : config.registry || '',
+      skip: options.skip ? options.skip.split(',').filter(skip => skip.length > 0) : config.skip && config.skip.length > 0 ? config.skip : [],
+      upgrade: options.upgrade !== undefined ? !!options.upgrade : config.upgrade !== undefined ? !!config.upgrade : false,
+      verbose: options.verbose !== undefined ? !!options.verbose : config.verbose !== undefined ? !!config.verbose : false,
+      yarn: options.yarn !== undefined ? !!options.yarn : config.yarn !== undefined ? !!config.yarn : false
     }
     try {
-      if ((options.fixed || options.skip.length > 0 || options.yarn) && !options.upgrade) {
-        const opts = [options.fixed && '-f', options.skip.length > 0 && '-s', options.yarn && '-y'].filter(option => option)
-        throw new Error(`Missing -u option when using ${opts.join(' and ')} option${opts.length > 1 ? 's' : ''}`)
-      }
-      const info = getInfo()
+      const info = getPackageInfo()
       const { current } = info
-      console.log(`${chalk.green(`upgradeps v${VERSION}`)} ${chalk.gray(`${figures.line} run with -h to output usage information`)}`)
       const versions = await queryVersions({ current, options })
       await print({ options, versions })
       if (options.upgrade) {
