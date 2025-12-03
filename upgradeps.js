@@ -29,7 +29,7 @@ import { execSync } from 'child_process'
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
 import { program } from 'commander'
 
-const VERSION = '2.1.0'
+const VERSION = '2.1.1'
 TimeAgo.addDefaultLocale(en)
 
 const getColor = differenceType => {
@@ -48,13 +48,13 @@ const getColor = differenceType => {
 }
 
 const getConfig = () => {
-  const configPath = pathResolve(process.cwd(), 'upgradeps.json')
+  const configPath = pathResolve(process.cwd(), '.upgradeps.json')
   if (existsSync(configPath)) {
     try {
       const configContents = readFileSync(configPath, 'utf8')
       return JSON.parse(configContents)
     } catch (error) {
-      console.log(` ${chalk.yellow(figures.warning)} ${chalk.blue('error parsing upgradeps.json, using defaults')}`)
+      console.log(` ${chalk.yellow(figures.warning)} ${chalk.blue('error parsing .upgradeps.json, using defaults')}`)
       return {}
     }
   }
@@ -272,7 +272,7 @@ program
     console.log(`${chalk.magenta(figures.play)} ${chalk.green(`upgradeps v${VERSION}`)} ${chalk.magenta(`<${pathBasename(process.cwd())}>`)} ${chalk.gray(`${figures.line} run with -h to output usage information`)}`)
     const config = Object.keys(options).length > 0 ? {} : getConfig()
     if (Object.keys(config).length > 0) {
-      console.log(` ${chalk.blue(figures.bullet)} ${chalk.blue('using configuration from upgradeps.json')}`)
+      console.log(` ${chalk.blue(figures.bullet)} ${chalk.blue('using configuration from .upgradeps.json')}`)
     }
     options = {
       fixed: options.fixed !== undefined ? !!options.fixed : config.fixed !== undefined ? !!config.fixed : false,

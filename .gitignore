@@ -1,4 +1,4 @@
 .DS_Store
+.upgradeps.json
 /node_modules
 package-lock.json
-upgradeps.json

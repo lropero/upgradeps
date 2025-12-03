@@ -2,7 +2,7 @@
 
 Audit and upgrade all dependencies in package.json.
 
-upgradeps is a small command-line tool that inspects the dependencies declared in your package.json file, compares them with the latest versions published on the npm registry, and optionally updates package.json for you.
+**upgradeps** is a small command-line tool that inspects the dependencies declared in your package.json file, compares them with the latest versions published on the npm registry, and optionally updates package.json for you.
 
 ![upgradeps screenshot](https://user-images.githubusercontent.com/4450399/184115801-ca0fa405-32f3-49b3-9db3-bfb86a804845.png)
 
@@ -135,13 +135,11 @@ npx upgradeps -u -y
 
 ## Configuration file
 
-Instead of repeating the same flags, you can add an upgradeps.json file next to your package.json to define default behavior.
+Instead of repeating the same flags, you can add a `.upgradeps.json` file next to your package.json to define default behavior.
 
-If you run upgradeps without any options, upgradeps.json is loaded (if it exists) and its values are used (with built-in defaults where needed). If you pass any CLI options, upgradeps.json is ignored for that run and only CLI flags + defaults are used.
+If you run upgradeps without any options, `.upgradeps.json` is loaded (if it exists) and its values are used (with built-in defaults where needed). If you pass any CLI options, `.upgradeps.json` is ignored for that run and only CLI flags + defaults are used.
 
-### Example upgradeps.json
-
-A typical configuration might look like this:
+### Example .upgradeps.json
 
 ```json
 {
@@ -171,10 +169,10 @@ All properties are optional. When a property is omitted, its default is used.
 
 ### CLI vs config
 
-- Running upgradeps with no options uses upgradeps.json (if present) + built-in defaults.
-- Running upgradeps with one or more options uses only CLI flags + built-in defaults (upgradeps.json is ignored for that run).
+- Running upgradeps with no options uses `.upgradeps.json` (if present) + built-in defaults.
+- Running upgradeps with one or more options uses only CLI flags + built-in defaults (`.upgradeps.json` is ignored for that run).
 
-In other words, upgradeps.json is for _plain_ runs with no flags (as soon as you pass options, you're opting into a fully CLI-driven run).
+In other words, `.upgradeps.json` is for _plain_ runs with no flags (as soon as you pass options, you're opting into a fully CLI-driven run).
 
 ## Tips
 
