@@ -56,7 +56,7 @@ npx upgradeps [options]
 
 Minimum age in minutes a published version must have before it is eligible as an upgrade target.
 
-If a newer version exists but was published less than this many minutes ago, it is skipped and the next eligible version (if any) is selected instead. When running in verbose mode, the newest skipped version is noted so you can see what was held back.
+If a newer version exists but was published less than this many minutes ago, it is skipped and the next eligible version (if any) is selected instead. When no eligible upgrade exists because the newest candidate is too recent, the tool reports the skipped version so you can see what was held back.
 
 Default: `1440` (24 hours).
 
