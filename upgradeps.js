@@ -30,7 +30,7 @@ import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
 import { program } from 'commander'
 
 const DEFAULT_MINIMUM_RELEASE_AGE = 1440
-const VERSION = '2.2.1'
+const VERSION = '2.2.2'
 TimeAgo.addDefaultLocale(en)
 
 const getColor = differenceType => {
@@ -116,11 +116,13 @@ const print = ({ options, versions }) =>
         stats.audit = {}
       }
       if (differenceType !== 'latest' || options.verbose || rejectedByAge) {
-        if (!stats.audit[differenceType]) {
-          stats.audit[differenceType] = 0
+        if (differenceType !== 'latest' || options.verbose) {
+          if (!stats.audit[differenceType]) {
+            stats.audit[differenceType] = 0
+          }
+          stats.amount++
+          stats.audit[differenceType]++
         }
-        stats.amount++
-        stats.audit[differenceType]++
         const ago = time ? `last publish ${timeAgo.format(new Date(time))}` : ''
         const color = ago.includes('2 years') ? 'bgMagenta' : ago.includes('years') ? 'bgRed' : ago.includes('year') ? 'bgYellow' : 'gray'
         console.log(`  ${getFigure(differenceType)} ${chalk.cyan(pckg)} ${getDetails({ currentVersion, differenceType, version: latest })}${getDependencies(dependencies)}${ago.length > 0 ? ` ${chalk[color](ago)}` : ''}`)
