@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Copyright (c) 2023, Luciano Ropero <lropero@gmail.com>
+ * Copyright (c) 2026, Lei Mococ <lropero@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -29,7 +29,8 @@ import { execSync } from 'child_process'
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
 import { program } from 'commander'
 
-const VERSION = '2.1.1'
+const DEFAULT_MINIMUM_RELEASE_AGE = 1440
+const VERSION = '2.2.0'
 TimeAgo.addDefaultLocale(en)
 
 const getColor = differenceType => {
@@ -110,7 +111,7 @@ const print = ({ options, versions }) =>
     const stats = { amount: 0 }
     const timeAgo = new TimeAgo()
     Object.keys(versions).forEach(pckg => {
-      const { currentVersion, dependencies, differenceType = 'latest', latest, time } = versions[pckg]
+      const { currentVersion, dependencies, differenceType = 'latest', latest, rejectedByAge, time } = versions[pckg]
       if (!stats.audit) {
         stats.audit = {}
       }
@@ -123,6 +124,10 @@ const print = ({ options, versions }) =>
         const ago = time ? `last publish ${timeAgo.format(new Date(time))}` : ''
         const color = ago.includes('2 years') ? 'bgMagenta' : ago.includes('years') ? 'bgRed' : ago.includes('year') ? 'bgYellow' : 'gray'
         console.log(`  ${getFigure(differenceType)} ${chalk.cyan(pckg)} ${getDetails({ currentVersion, differenceType, version: latest })}${getDependencies(dependencies)}${ago.length > 0 ? ` ${chalk[color](ago)}` : ''}`)
+        if (rejectedByAge) {
+          const rejectedAgo = rejectedByAge.time ? ` (published ${timeAgo.format(new Date(rejectedByAge.time))})` : ''
+          console.log(`    ${chalk.gray(`${figures.arrowRight} ${rejectedByAge.version} available but too recent${rejectedAgo}`)}`)
+        }
       }
     })
     const emojis = ['ヽ(´▽`)ノ', 'ԅ(≖‿≖ԅ)', 'ᕕ( ᐛ )ᕗ']
@@ -134,9 +139,11 @@ const print = ({ options, versions }) =>
   })
 
 const queryVersions = async ({ current, options }) => {
+  const ageThresholdMs = options.minimumReleaseAge * 60 * 1000
   const dependencies = Object.keys(current)
     .filter(group => options.groups.includes(group))
     .reduce((dependencies, group) => ({ ...dependencies, ...current[group] }), {})
+  const now = Date.now()
   const responses = await Promise.all(
     Object.keys(dependencies).map(async pckg => {
       try {
@@ -171,30 +178,39 @@ const queryVersions = async ({ current, options }) => {
           }
         }
         try {
-          const differenceType = semverDiff(currentVersion, packument['dist-tags'].latest)
+          const allVersions = Object.keys(packument.versions)
+          const candidates = allVersions.filter(version => {
+            const diff = semverDiff(currentVersion, version)
+            if (!diff) return false
+            return options.minor ? ['minor', 'patch'].includes(diff) : !diff.startsWith('pre')
+          })
+          const newestCandidate = latestSemver(candidates)
+          const eligible = candidates.filter(version => {
+            const publishTime = packument.time?.[version]
+            if (!publishTime) return false
+            return now - new Date(publishTime).getTime() >= ageThresholdMs
+          })
+          const target = latestSemver(eligible)
+          let rejectedByAge = null
+          if (newestCandidate) {
+            const publishTime = packument.time?.[newestCandidate]
+            if (publishTime && now - new Date(publishTime).getTime() < ageThresholdMs) {
+              rejectedByAge = { version: newestCandidate, time: publishTime }
+            }
+          }
+          const differenceType = target ? semverDiff(currentVersion, target) : undefined
           details = {
             currentVersion,
             ...details,
             ...(differenceType && { differenceType }),
-            latest: packument['dist-tags'].latest,
-            time: packument.time[packument['dist-tags'].latest]
+            latest: target || currentVersion,
+            time: packument.time?.[target || currentVersion],
+            ...(rejectedByAge && { rejectedByAge })
           }
           let result = { [pckg]: false }
-          if (options.minor) {
-            const patch = latestSemver(
-              Object.keys(packument.versions).filter(version => {
-                const differenceType = semverDiff(currentVersion, version)
-                return differenceType && ['minor', 'patch'].includes(differenceType)
-              })
-            )
-            if (patch) {
-              details.differenceType = semverDiff(currentVersion, patch)
-              details.latest = patch
-              result = { [pckg]: details }
-            } else if (!differenceType && options.verbose) {
-              result = { [pckg]: details }
-            }
-          } else {
+          if (differenceType) {
+            result = { [pckg]: details }
+          } else if (options.verbose) {
             result = { [pckg]: details }
           }
           return result
@@ -260,6 +276,7 @@ const writePackage = ({ info, options, upgraded }) => {
 
 program
   .version(VERSION)
+  .option('-a, --minimum-release-age <minutes>', `minimum age in minutes a published version must have before it is eligible for upgrade (default: ${DEFAULT_MINIMUM_RELEASE_AGE})`)
   .option('-f, --fixed', 'remove ^carets when upgrading (use with -u)')
   .option('-g, --groups <groups>', 'specify dependency groups to process (defaults to all) -> e.g. "-g dependencies,devDependecies"')
   .option('-m, --minor', 'process only minor and patch updates')
@@ -277,12 +294,16 @@ program
     options = {
       fixed: options.fixed !== undefined ? !!options.fixed : config.fixed !== undefined ? !!config.fixed : false,
       groups: options.groups ? options.groups.split(',').filter(group => ['bundledDependencies', 'dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'].includes(group)) : config.groups && config.groups.length > 0 ? config.groups.filter(group => ['bundledDependencies', 'dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'].includes(group)) : 'bundledDependencies,dependencies,devDependencies,optionalDependencies,peerDependencies'.split(','),
+      minimumReleaseAge: options.minimumReleaseAge !== undefined ? Number(options.minimumReleaseAge) : config.minimumReleaseAge !== undefined ? Number(config.minimumReleaseAge) : DEFAULT_MINIMUM_RELEASE_AGE,
       minor: options.minor !== undefined ? !!options.minor : config.minor !== undefined ? !!config.minor : false,
       registry: options.registry !== undefined ? options.registry : config.registry || '',
       skip: options.skip ? options.skip.split(',').filter(skip => skip.length > 0) : config.skip && config.skip.length > 0 ? config.skip : [],
       upgrade: options.upgrade !== undefined ? !!options.upgrade : config.upgrade !== undefined ? !!config.upgrade : false,
       verbose: options.verbose !== undefined ? !!options.verbose : config.verbose !== undefined ? !!config.verbose : false,
       yarn: options.yarn !== undefined ? !!options.yarn : config.yarn !== undefined ? !!config.yarn : false
+    }
+    if (!Number.isFinite(options.minimumReleaseAge) || options.minimumReleaseAge < 0) {
+      options.minimumReleaseAge = DEFAULT_MINIMUM_RELEASE_AGE
     }
     try {
       const info = getPackageInfo()

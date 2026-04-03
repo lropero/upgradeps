@@ -1,6 +1,6 @@
 {
   "name": "upgradeps",
-  "version": "2.1.1",
+  "version": "2.2.0",
   "description": "Audit and upgrade all dependencies in package.json.",
   "keywords": [
     "audit",
@@ -18,7 +18,7 @@
     "url": "git+https://github.com/lropero/upgradeps.git"
   },
   "license": "ISC",
-  "author": "Luciano Ropero <lropero@gmail.com>",
+  "author": "Lei Mococ <lropero@gmail.com>",
   "type": "module",
   "exports": "./upgradeps.js",
   "bin": {
@@ -31,12 +31,12 @@
   "dependencies": {
     "chalk": "5.6.2",
     "chalk-animation": "2.0.3",
-    "commander": "14.0.2",
+    "commander": "14.0.3",
     "detect-indent": "7.0.2",
     "figures": "6.1.0",
-    "javascript-time-ago": "2.5.12",
+    "javascript-time-ago": "2.6.4",
     "latest-semver": "4.0.0",
-    "pacote": "21.0.4",
+    "pacote": "21.5.0",
     "semver-diff": "5.0.0"
   },
   "engines": {

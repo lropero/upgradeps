@@ -11,6 +11,7 @@ Audit and upgrade all dependencies in package.json.
 - Works as a dry run by default, never changing files unless explicitly told to.
 - Supports all standard dependency groups: dependencies, devDependencies, peerDependencies, optionalDependencies, bundledDependencies.
 - Lets you restrict upgrades to minor and patch versions only.
+- Avoids upgrading to versions published too recently (configurable minimum release age, default 24 hours).
 - Can remove semver `^` carets and lock your package.json to exact versions.
 - Can use npm or yarn as the package manager.
 - Supports a simple JSON configuration file so you do not have to repeat flags.
@@ -51,6 +52,24 @@ upgradeps is intended to be used via npx:
 npx upgradeps [options]
 ```
 
+### -a / --minimum-release-age \<minutes\>
+
+Minimum age in minutes a published version must have before it is eligible as an upgrade target.
+
+If a newer version exists but was published less than this many minutes ago, it is skipped and the next eligible version (if any) is selected instead. When running in verbose mode, the newest skipped version is noted so you can see what was held back.
+
+Default: `1440` (24 hours).
+
+```sh
+npx upgradeps -a 720
+```
+
+Set to `0` to disable the age gate and consider all published versions:
+
+```sh
+npx upgradeps -a 0
+```
+
 ### -f / --fixed
 
 Remove the `^` caret symbol from versions when upgrading, turning ranges into fixed versions.
@@ -61,7 +80,7 @@ This flag has an effect only when used together with -u.
 npx upgradeps -u -f
 ```
 
-### -g / --groups <groups>
+### -g / --groups \<groups\>
 
 Comma-separated list of dependency groups to process.
 
@@ -89,7 +108,7 @@ Use this when you want safe, non-breaking upgrades.
 npx upgradeps -m
 ```
 
-### -r / --registry <registry>
+### -r / --registry \<registry\>
 
 Use a custom npm registry URL.
 
@@ -97,7 +116,7 @@ Use a custom npm registry URL.
 npx upgradeps -r https://registry.npmjs.org
 ```
 
-### -s / --skip <packages>
+### -s / --skip \<packages\>
 
 Comma-separated list of package names that should never be upgraded.
 
@@ -145,6 +164,7 @@ If you run upgradeps without any options, `.upgradeps.json` is loaded (if it exi
 {
   "fixed": false,
   "groups": ["dependencies", "devDependencies"],
+  "minimumReleaseAge": 1440,
   "minor": false,
   "registry": "",
   "skip": ["react", "react-dom"],
@@ -160,6 +180,7 @@ All properties are optional. When a property is omitted, its default is used.
 
 - **`fixed`** (boolean): Remove `^` carets when upgrading. Default: `false`
 - **`groups`** (array of strings): Specify dependency groups to process. Default: `[]` (all supported groups present in package.json)
+- **`minimumReleaseAge`** (number): Minimum age in minutes a published version must have before it is eligible for upgrade. Versions published more recently are skipped. Default: `1440` (24 hours)
 - **`minor`** (boolean): Process only minor and patch updates. Default: `false`
 - **`registry`** (string): Set custom npm registry URL. Default: `""`
 - **`skip`** (array of strings): Packages to skip during upgrade. Default: `[]` (none)
