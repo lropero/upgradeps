@@ -30,7 +30,7 @@ import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
 import { program } from 'commander'
 
 const DEFAULT_MINIMUM_RELEASE_AGE = 1440
-const VERSION = '2.2.2'
+const VERSION = '2.2.3'
 TimeAgo.addDefaultLocale(en)
 
 const getColor = differenceType => {
@@ -128,7 +128,7 @@ const print = ({ options, versions }) =>
         console.log(`  ${getFigure(differenceType)} ${chalk.cyan(pckg)} ${getDetails({ currentVersion, differenceType, version: latest })}${getDependencies(dependencies)}${ago.length > 0 ? ` ${chalk[color](ago)}` : ''}`)
         if (rejectedByAge) {
           const rejectedAgo = rejectedByAge.time ? ` (published ${timeAgo.format(new Date(rejectedByAge.time))})` : ''
-          console.log(`${' '.repeat(4 + pckg.length + 1 + currentVersion.length + 1)}${chalk.yellow(figures.arrowRight)} ${chalk.gray(`${rejectedByAge.version} available but too recent${rejectedAgo}`)}`)
+          console.log(`${' '.repeat(5)}${chalk.yellow(figures.bullet)} ${chalk.gray(`${rejectedByAge.version} available but too recent${rejectedAgo}`)}`)
         }
       }
     })

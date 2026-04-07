@@ -1,6 +1,6 @@
 {
   "name": "upgradeps",
-  "version": "2.2.2",
+  "version": "2.2.3",
   "description": "Audit and upgrade all dependencies in package.json.",
   "keywords": [
     "audit",
