@@ -1,6 +1,6 @@
 {
   "name": "upgradeps",
-  "version": "2.2.3",
+  "version": "2.3.0",
   "description": "Audit and upgrade all dependencies in package.json.",
   "keywords": [
     "audit",
@@ -40,6 +40,6 @@
     "semver-diff": "5.0.0"
   },
   "engines": {
-    "node": ">=14"
+    "node": ">=18"
   }
 }

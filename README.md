@@ -8,11 +8,11 @@ Audit and upgrade all dependencies in package.json.
 
 ## Features
 
-- Works as a dry run by default, never changing files unless explicitly told to.
+- Dry run by default, never changing files unless explicitly told to.
 - Supports all standard dependency groups: dependencies, devDependencies, peerDependencies, optionalDependencies, bundledDependencies.
 - Lets you restrict upgrades to minor and patch versions only.
 - Avoids upgrading to versions published too recently (configurable minimum release age, default 24 hours).
-- Can remove semver `^` carets and lock your package.json to exact versions.
+- Automatically removes semver `^` carets when upgrading, locking your package.json to exact versions.
 - Can use npm or yarn as the package manager.
 - Supports a simple JSON configuration file so you do not have to repeat flags.
 
@@ -26,19 +26,13 @@ From the root of a Node project:
 npx upgradeps
 ```
 
-2. Apply all available upgrades:
+2. Apply all available upgrades (carets are removed automatically):
 
 ```sh
 npx upgradeps -u
 ```
 
-3. Apply upgrades and remove `^` carets:
-
-```sh
-npx upgradeps -u -f
-```
-
-4. Upgrade only minor and patch versions:
+3. Upgrade only minor and patch versions:
 
 ```sh
 npx upgradeps -u -m
@@ -52,9 +46,9 @@ upgradeps is intended to be used via npx:
 npx upgradeps [options]
 ```
 
-### -a / --minimum-release-age \<minutes\>
+### -a / --age \<minutes\>
 
-Minimum age in minutes a published version must have before it is eligible as an upgrade target.
+Set the minimum age in minutes a published version must have before it is eligible as an upgrade target.
 
 If a newer version exists but was published less than this many minutes ago, it is skipped and the next eligible version (if any) is selected instead. When no eligible upgrade exists because the newest candidate is too recent, the tool reports the skipped version so you can see what was held back.
 
@@ -68,19 +62,9 @@ Set to `0` to disable the age gate and consider all published versions:
 npx upgradeps -a 0
 ```
 
-### -f / --fixed
-
-Remove the `^` caret symbol from versions when upgrading, turning ranges into fixed versions.
-
-This flag has an effect only when used together with -u.
-
-```sh
-npx upgradeps -u -f
-```
-
 ### -g / --groups \<groups\>
 
-Comma-separated list of dependency groups to process.
+Specify dependency groups to process as a comma-separated list.
 
 Available groups:
 
@@ -116,7 +100,7 @@ npx upgradeps -r https://registry.npmjs.org
 
 ### -s / --skip \<packages\>
 
-Comma-separated list of package names that should never be upgraded.
+Skip specified packages during upgrade, as a comma-separated list.
 
 This is useful when a dependency is pinned for compatibility reasons.
 
@@ -126,7 +110,7 @@ npx upgradeps -u -s react,react-dom
 
 ### -u / --upgrade
 
-Modify package.json in place, writing upgraded versions back to each dependency group.
+Modify package.json in place, writing upgraded versions back to each dependency group. Semver `^` carets are automatically removed, locking dependencies to exact versions.
 
 Without this flag, upgradeps only prints a report.
 
@@ -160,9 +144,8 @@ If you run upgradeps without any options, `.upgradeps.json` is loaded (if it exi
 
 ```json
 {
-  "fixed": false,
+  "age": 1440,
   "groups": ["dependencies", "devDependencies"],
-  "minimumReleaseAge": 1440,
   "minor": false,
   "registry": "",
   "skip": ["react", "react-dom"],
@@ -176,14 +159,13 @@ If you run upgradeps without any options, `.upgradeps.json` is loaded (if it exi
 
 All properties are optional. When a property is omitted, its default is used.
 
-- **`fixed`** (boolean): Remove `^` carets when upgrading. Default: `false`
+- **`age`** (number): Set minimum age in minutes a published version must have before it is eligible for upgrade. Versions published more recently are skipped. Default: `1440` (24 hours)
 - **`groups`** (array of strings): Specify dependency groups to process. Default: `[]` (all supported groups present in package.json)
-- **`minimumReleaseAge`** (number): Minimum age in minutes a published version must have before it is eligible for upgrade. Versions published more recently are skipped. Default: `1440` (24 hours)
 - **`minor`** (boolean): Process only minor and patch updates. Default: `false`
 - **`registry`** (string): Set custom npm registry URL. Default: `""`
-- **`skip`** (array of strings): Packages to skip during upgrade. Default: `[]` (none)
-- **`upgrade`** (boolean): Automatically upgrade package.json. Default: `false`
-- **`verbose`** (boolean): Print information for latest dependencies as well. Default: `false`
+- **`skip`** (array of strings): Skip packages during upgrade. Default: `[]` (none)
+- **`upgrade`** (boolean): Upgrade package.json with latest versions. Default: `false`
+- **`verbose`** (boolean): Print information for up-to-date dependencies as well. Default: `false`
 - **`yarn`** (boolean): Use yarn instead of npm. Default: `false`
 
 ### CLI vs config
@@ -197,7 +179,7 @@ In other words, `.upgradeps.json` is for _plain_ runs with no flags (as soon as 
 
 - Run a dry audit first (without -u) to see what will change.
 - Commit your package.json and lockfile before running upgradeps so you can easily revert if needed.
-- Combine -m with -u to perform safe, incremental updates on large projects.
+- Combine -u with -m to perform safe, incremental updates on large projects.
 
 ## License
 

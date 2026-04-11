@@ -29,8 +29,9 @@ import { execSync } from 'child_process'
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
 import { program } from 'commander'
 
-const DEFAULT_MINIMUM_RELEASE_AGE = 1440
-const VERSION = '2.2.3'
+const DEFAULT_AGE = 1440
+const VERSION = '2.3.0'
+
 TimeAgo.addDefaultLocale(en)
 
 const getColor = differenceType => {
@@ -128,7 +129,7 @@ const print = ({ options, versions }) =>
         console.log(`  ${getFigure(differenceType)} ${chalk.cyan(pckg)} ${getDetails({ currentVersion, differenceType, version: latest })}${getDependencies(dependencies)}${ago.length > 0 ? ` ${chalk[color](ago)}` : ''}`)
         if (rejectedByAge) {
           const rejectedAgo = rejectedByAge.time ? ` (published ${timeAgo.format(new Date(rejectedByAge.time))})` : ''
-          console.log(`${' '.repeat(5)}${chalk.yellow(figures.bullet)} ${chalk.gray(`${rejectedByAge.version} available but too recent${rejectedAgo}`)}`)
+          console.log(`${' '.repeat(4)}${chalk.yellow(figures.bullet)} ${chalk.gray(`${rejectedByAge.version} available but too recent${rejectedAgo}`)}`)
         }
       }
     })
@@ -141,7 +142,7 @@ const print = ({ options, versions }) =>
   })
 
 const queryVersions = async ({ current, options }) => {
-  const ageThresholdMs = options.minimumReleaseAge * 60 * 1000
+  const ageThresholdMs = options.age * 60 * 1000
   const dependencies = Object.keys(current)
     .filter(group => options.groups.includes(group))
     .reduce((dependencies, group) => ({ ...dependencies, ...current[group] }), {})
@@ -249,12 +250,10 @@ const upgrade = ({ info, options, versions }) => {
       for (const pckg of Object.keys(upgraded[group])) {
         if (!options.skip.includes(pckg)) {
           if (versions[pckg]?.differenceType) {
-            upgraded[group][pckg] = `^${versions[pckg].latest}`
+            upgraded[group][pckg] = versions[pckg].latest
             hasChanges = true
           }
-          if (options.fixed) {
-            upgraded[group][pckg] = upgraded[group][pckg].replace('^', '')
-          }
+          upgraded[group][pckg] = upgraded[group][pckg].replace('^', '')
         }
       }
     })
@@ -278,14 +277,13 @@ const writePackage = ({ info, options, upgraded }) => {
 
 program
   .version(VERSION)
-  .option('-a, --minimum-release-age <minutes>', `minimum age in minutes a published version must have before it is eligible for upgrade (default: ${DEFAULT_MINIMUM_RELEASE_AGE})`)
-  .option('-f, --fixed', 'remove ^carets when upgrading (use with -u)')
-  .option('-g, --groups <groups>', 'specify dependency groups to process (defaults to all) -> e.g. "-g dependencies,devDependecies"')
+  .option('-a, --age <minutes>', `set minimum age in minutes for a version to be eligible for upgrade (default: ${DEFAULT_AGE})`)
+  .option('-g, --groups <groups>', 'specify dependency groups to process, e.g. "dependencies,devDependencies" (default: all)')
   .option('-m, --minor', 'process only minor and patch updates')
   .option('-r, --registry <registry>', 'set custom npm registry URL')
-  .option('-s, --skip <packages>', 'packages to skip during upgrade -> e.g. "-s react,react-dom" (use with -u)')
-  .option('-u, --upgrade', 'automatically upgrade package.json')
-  .option('-v, --verbose', 'print information for latest dependencies as well')
+  .option('-s, --skip <packages>', 'skip packages during upgrade, e.g. "react,react-dom" (use with -u)')
+  .option('-u, --upgrade', 'upgrade package.json with latest versions')
+  .option('-v, --verbose', 'print information for up-to-date dependencies as well')
   .option('-y, --yarn', 'use yarn instead of npm (use with -u)')
   .action(async options => {
     console.log(`${chalk.magenta(figures.play)} ${chalk.green(`upgradeps v${VERSION}`)} ${chalk.magenta(`<${pathBasename(process.cwd())}>`)} ${chalk.gray(`${figures.line} run with -h to output usage information`)}`)
@@ -294,9 +292,8 @@ program
       console.log(` ${chalk.blue(figures.bullet)} ${chalk.blue('using configuration from .upgradeps.json')}`)
     }
     options = {
-      fixed: options.fixed !== undefined ? !!options.fixed : config.fixed !== undefined ? !!config.fixed : false,
       groups: options.groups ? options.groups.split(',').filter(group => ['bundledDependencies', 'dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'].includes(group)) : config.groups && config.groups.length > 0 ? config.groups.filter(group => ['bundledDependencies', 'dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'].includes(group)) : 'bundledDependencies,dependencies,devDependencies,optionalDependencies,peerDependencies'.split(','),
-      minimumReleaseAge: options.minimumReleaseAge !== undefined ? Number(options.minimumReleaseAge) : config.minimumReleaseAge !== undefined ? Number(config.minimumReleaseAge) : DEFAULT_MINIMUM_RELEASE_AGE,
+      age: options.age !== undefined ? Number(options.age) : config.age !== undefined ? Number(config.age) : DEFAULT_AGE,
       minor: options.minor !== undefined ? !!options.minor : config.minor !== undefined ? !!config.minor : false,
       registry: options.registry !== undefined ? options.registry : config.registry || '',
       skip: options.skip ? options.skip.split(',').filter(skip => skip.length > 0) : config.skip && config.skip.length > 0 ? config.skip : [],
@@ -304,8 +301,8 @@ program
       verbose: options.verbose !== undefined ? !!options.verbose : config.verbose !== undefined ? !!config.verbose : false,
       yarn: options.yarn !== undefined ? !!options.yarn : config.yarn !== undefined ? !!config.yarn : false
     }
-    if (!Number.isFinite(options.minimumReleaseAge) || options.minimumReleaseAge < 0) {
-      options.minimumReleaseAge = DEFAULT_MINIMUM_RELEASE_AGE
+    if (!Number.isFinite(options.age) || options.age < 0) {
+      options.age = DEFAULT_AGE
     }
     try {
       const info = getPackageInfo()
