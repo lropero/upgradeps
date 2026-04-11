@@ -30,7 +30,7 @@ import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
 import { program } from 'commander'
 
 const DEFAULT_AGE = 1440
-const VERSION = '2.3.0'
+const VERSION = '2.3.1'
 
 TimeAgo.addDefaultLocale(en)
 
@@ -253,7 +253,7 @@ const upgrade = ({ info, options, versions }) => {
             upgraded[group][pckg] = versions[pckg].latest
             hasChanges = true
           }
-          upgraded[group][pckg] = upgraded[group][pckg].replace('^', '')
+          upgraded[group][pckg] = upgraded[group][pckg].replace(/[\^~]/, '')
         }
       }
     })

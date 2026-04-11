@@ -12,7 +12,7 @@ Audit and upgrade all dependencies in package.json.
 - Supports all standard dependency groups: dependencies, devDependencies, peerDependencies, optionalDependencies, bundledDependencies.
 - Lets you restrict upgrades to minor and patch versions only.
 - Avoids upgrading to versions published too recently (configurable minimum release age, default 24 hours).
-- Automatically removes semver `^` carets when upgrading, locking your package.json to exact versions.
+- Automatically removes semver `^` carets and `~` tildes when upgrading, locking your package.json to exact versions.
 - Can use npm or yarn as the package manager.
 - Supports a simple JSON configuration file so you do not have to repeat flags.
 
@@ -26,7 +26,7 @@ From the root of a Node project:
 npx upgradeps
 ```
 
-2. Apply all available upgrades (carets are removed automatically):
+2. Apply all available upgrades (carets and tildes are removed automatically):
 
 ```sh
 npx upgradeps -u
@@ -110,7 +110,7 @@ npx upgradeps -u -s react,react-dom
 
 ### -u / --upgrade
 
-Modify package.json in place, writing upgraded versions back to each dependency group. Semver `^` carets are automatically removed, locking dependencies to exact versions.
+Modify package.json in place, writing upgraded versions back to each dependency group. Semver `^` carets and `~` tildes are automatically removed, locking dependencies to exact versions.
 
 Without this flag, upgradeps only prints a report.
 
